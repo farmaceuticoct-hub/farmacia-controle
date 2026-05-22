@@ -287,12 +287,6 @@
 
 <script>
 // ==================== CONFIGURAÇÃO (v2.4 - GitHub Ready) ====================
-const API_KEY = 'AIzaSyDF8DR0bd2je4qmZiAtdLPy2FS1Ssea3rk';
-const CLIENT_EMAIL = 'site-controlados@site-controlados.iam.gserviceaccount.com';
-// Chave protegida
-const _k = ['-----BEGIN PRIVATE KEY-----','MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCez1jZWdp41jiW','sWcB8a8FGTWbij/0MYwhmYDHTgWoA/1SS7+ZNyapzzeT1Tb7S36soicPG3y5TFrn','n6SAxYpJRcBouNq7qyrrR/YVJGjolHIBtA8MCE+y3ZrmGXaUNzTCAtp7ldIsEC9Y','GfKXPwKym37gQqyoSP8VDBrIHEpnHv77cEAK2SSBJ0zxjPfJuU5hutpbqy4x7+DF','17Oa05+HlxqD72XE7gER7KegdsQZZcKxDFKHglkKfeE4fyzZUaHd8C0TWJotgSus','tpGaY9MdoPYkYbBjnIkh5SsRmacpR7E6w/MM1T7E4RTYJPfd4G+HRI8TiUbbOcXI','O+V66LRbAgMBAAECggEAGPqWct13XRaeIP8Mq4QcWh9xzKINVsyXn3ikW5+R3oWo','ydHLSan15V4H/l3aKjg2LP4g9EyHrMzt5s0NPrSTgIc9m9so4GgsYISEQtAOxjev','H5shhhbP6QYtL9sPySv5GuOrAib5v1+Dqtut9LcppqE0RB7d8bxFjvBv9/YR3S/b','T4U9DDuo29seRszoVcmtcEA+dZYnbMRwKuoxK8ULm6/thepQMSOYjcK4mib1hV3d','Kjawm+wyOSI/R0DU+BwoWCuy0DxOPeguq+cffKnqhuIeVXxm5aKho8bLOTY1isgI','xQWQXkZzsrbc6B7J7ilsLeBYKXus4x+IlswBEsthAQKBgQDKsNJqTYCwPD4Bx0fn','oQdiA4b/uOU9GqfibffjCX6IBGGYBRA6V320/ZZpqLWzUFeHEKLq9h6ND1xdotNZ','cdU9HKfrS2hspC8T2Fnj5NBZYeXpHoNGOeUL1PxdRCNOYokheZQpcLGyHEiHkIaf','eI8kZJhTeWArbdqKlAyhyRXnAQKBgQDIlAfglsWpkoIAveL81B7FsJMcSl8RZg9q','6FZB5+WFXOrNQ6hT7x0zH8hxj5NHTlNSfCktnycwM49nzpspDE5vGli8M3gqNApP','hfjqjz306xY3vGkGKkqYUIdT6wE7iKOkxHxMMdSI0UcZcnUn3auIxIcv0ooRr0O2','m4C6wt6XWwKBgGdjXGEW2V6LzAEyOk4/SDnJnNHR6TSK5TnNaBUp4Z3VxkY5xvZL','bHamp1OL1+r4Pz1I0iFRm3HOdQnaJT5Jn0CF3m1Z0JEiClVwFSH2tAPzuMd5ZfKr','U1b+tB+KwwuXnWUy081zi2BTpvdnVBQB9dnVahGiJtjgNwpazDq2DHMBAoGBAKNH','jhoP4pyl/VppOayjaOF5Wmg/SqC5OnfG5uEDy94Cw8mQ+ChLkLObfeqj/Dqh0kZl','eIgA9T/R2T2h/MEvmXHsOqwKIhoI/xO5deZL8R29efqpT72LE+pmM6PmvLwgAUcS','BDVqox81bfGTMTfgxdCyW3Jcq7S1viOa9vIRzG3dAoGBAK3ZUON5DgRtIAhXWnoB','cmja16TNce1DDFUBpvQn4xKYG52m8MeIZPOG3XSWu7nxJlxh52V/NeRttSkevI/w','9sTtcevUuXsX7mn/3+rXuVrmnMD+aTQZWL54kNXv07AFOxMj4kEKhKFnmT2B8cTz','rzAZqla6RJ0c6JnjDsnjaWaZ','-----END PRIVATE KEY-----'];
-const PRIVATE_KEY = _k.join('\n').replace(/\n/g, '\n');
-
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const VERSAO = '2.4';
@@ -346,10 +340,56 @@ async function getToken(){
     token=(await r.json()).access_token;return token;
 }
 async function lerPlanilha(id,range){
-    if(!token)await getToken();
-    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`,{headers:{Authorization:`Bearer ${token}`}});
-    if(!r.ok)throw new Error(`HTTP ${r.status}`);
-    return(await r.json()).values||[];
+    try {
+    const response = await fetch(`${API_URL}/api/ler-planilha`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        planilhaId: id,
+        range: range
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.valores || [];
+
+  } catch (error) {
+    console.error('Erro ao ler:', error);
+    mostrarStatus('⚠️ Erro ao sincronizar. Verifique sua conexão.', 'erro');
+    return [];
+  }
+}
+
+async function escreverPlanilha(id, range, values) {
+  try {
+    const response = await fetch(`${API_URL}/api/escrever-planilha`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        planilhaId: id,
+        range: range,
+        valores: values
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ${response.status}`);
+    }
+
+    return await response.json();
+
+  } catch (error) {
+    console.error('Erro ao escrever:', error);
+    throw error;
+  }
 }
 async function escreverPlanilha(id,range,values){
     if(!token)await getToken();
