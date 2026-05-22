@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistência Farmacêutica v2.4</title>
+    <style>
+        :root {
+            --azul-escuro: #1a3a5c;
+            --azul-medio: #1e5090;
+            --azul-claro: #5b9bd5;
+            --azul-bebe: #b8d4f0;
+            --verde-agua: #4db8b0;
+            --verde-vibrante: #38a169;
+            --verde-suave: #48bb78;
+            --verde-claro: #c6f6d5;
+            --amarelo-alerta: #ecc94b;
+            --amarelo-claro: #fefcbf;
+            --roxo: #6b46c1;
+            --roxo-claro: #e9d8fd;
+            --branco: #ffffff;
+            --cinza-claro: #f7fafc;
+            --cinza-medio: #e2e8f0;
+            --texto: #2d3748;
+            --texto-claro: #718096;
+            --danger: #e53e3e;
+            --danger-claro: #fed7d7;
+            --warning: #ed8936;
+            --warning-claro: #feebc8;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+            background: linear-gradient(160deg, #1a3a5c 0%, #1e5090 50%, #1a3a5c 100%);
+            background-attachment: fixed;
+            min-height: 100vh; 
+            padding: 20px;
+        }
+        
+        .container { max-width: 1600px; margin: 0 auto; background: var(--branco); border-radius: 24px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); overflow: hidden; }
+        .header { background: var(--azul-escuro); color: white; padding: 18px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 3px solid var(--verde-agua); }
+        .header-logo { display: flex; align-items: center; gap: 15px; }
+        .logo-svg { width: 65px; height: 65px; flex-shrink: 0; }
+        .header-info h1 { font-size: 1.4em; font-weight: 400; }
+        .header-info .subtitle { font-size: 0.78em; opacity: 0.9; }
+        
+        .nav-tabs { display: flex; background: #0f2540; gap: 0; border-bottom: 3px solid var(--verde-agua); }
+        .nav-tab { padding: 15px 30px; color: rgba(255,255,255,0.7); cursor: pointer; font-weight: 600; font-size: 0.9em; transition: all 0.3s; border-bottom: 3px solid transparent; margin-bottom: -3px; display: flex; align-items: center; gap: 8px; }
+        .nav-tab:hover { color: white; background: rgba(255,255,255,0.05); }
+        .nav-tab.active { color: white; border-bottom-color: var(--verde-agua); background: rgba(77,184,176,0.15); }
+        .nav-tab-badge { background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 12px; font-size: 0.8em; }
+        
+        .content { padding: 25px 30px; background: var(--cinza-claro); min-height: 500px; }
+        .modulo { display: none; }
+        .modulo.active { display: block; }
+        
+        .status-registro { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; padding: 16px 28px; border-radius: 14px; font-weight: 600; font-size: 0.95em; box-shadow: 0 10px 40px rgba(0,0,0,0.3); display: none; max-width: 500px; text-align: center; white-space: pre-line; animation: statusIn 0.4s ease; }
+        @keyframes statusIn { from { transform: translateX(-50%) translateY(-30px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .status-sucesso { background: #f0fff4; color: #22543d; border: 2px solid var(--verde-vibrante); }
+        .status-alerta { background: var(--warning-claro); color: #7c2d12; border: 2px solid var(--warning); }
+        .status-erro { background: var(--danger-claro); color: #742a2a; border: 2px solid var(--danger); }
+        .status-info { background: #ebf8ff; color: #2a4365; border: 2px solid #4299e1; }
+        
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; }
+        .dashboard-header h2 { color: var(--azul-escuro); font-weight: 500; font-size: 1.1em; }
+        .mes-selector { display: flex; align-items: center; gap: 10px; background: var(--branco); padding: 8px 14px; border-radius: 10px; border: 2px solid var(--cinza-medio); }
+        .mes-selector label { font-weight: 600; font-size: 0.8em; color: var(--azul-escuro); }
+        .mes-selector select { padding: 6px 10px; border: none; font-size: 13px; background: transparent; cursor: pointer; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .stat-card { background: var(--branco); border-radius: 14px; padding: 18px; border: 1px solid var(--cinza-medio); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+        .stat-card h3 { font-size: 0.72em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; color: var(--texto-claro); font-weight: 600; }
+        .stat-card .number { font-size: 2.2em; font-weight: 300; color: var(--azul-escuro); }
+        .stat-card small { display: block; margin-top: 4px; color: var(--texto-claro); font-size: 0.75em; }
+        
+        .form-section { background: var(--branco); padding: 22px; border-radius: 14px; margin-bottom: 22px; border: 1px solid var(--cinza-medio); }
+        .form-section h2 { margin-bottom: 18px; color: var(--azul-escuro); font-weight: 500; font-size: 1.1em; }
+        .info-box { background: linear-gradient(135deg, #ebf8ff, #f0f9ff); border-left: 4px solid var(--azul-claro); padding: 10px 14px; border-radius: 0 8px 8px 0; margin-bottom: 18px; font-size: 0.85em; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; font-size: 0.8em; margin-bottom: 5px; color: var(--texto); }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 2px solid var(--cinza-medio); border-radius: 8px; font-size: 13px; background: var(--branco); }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--azul-claro); }
+        .form-group input[readonly] { background: var(--cinza-claro); font-weight: bold; text-align: center; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: linear-gradient(135deg, var(--azul-medio), var(--azul-escuro)); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); }
+        .btn-success { background: linear-gradient(135deg, var(--verde-suave), var(--verde-vibrante)); color: white; }
+        .btn-roxo { background: linear-gradient(135deg, var(--roxo), #553c9a); color: white; }
+        .btn-warning { background: linear-gradient(135deg, var(--warning), #dd6b20); color: white; }
+        .btn-info { background: linear-gradient(135deg, #ebf8ff, var(--azul-bebe)); color: var(--azul-escuro); }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 6px; }
+        .btn-outline { background: transparent; border: 2px solid var(--azul-medio); color: var(--azul-medio); font-weight: 600; }
+        .btn-outline:hover { background: var(--azul-medio); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        
+        .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid var(--cinza-medio); background: var(--branco); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background: var(--azul-escuro); color: white; padding: 12px 14px; text-align: left; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.72em; }
+        td { padding: 10px 14px; border-bottom: 1px solid var(--cinza-medio); }
+        tbody tr:hover { background: #f7fafc; }
+        
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+        .badge-ok { background: var(--verde-claro); color: #22543d; }
+        .badge-alert { background: var(--danger-claro); color: #742a2a; animation: blink 1s infinite; }
+        .badge-mes-anterior { background: var(--amarelo-claro); color: #975a16; }
+        .badge-estoque-baixo { background: var(--danger-claro); color: #742a2a; }
+        .badge-estoque-medio { background: var(--amarelo-claro); color: #975a16; }
+        .badge-estoque-ok { background: var(--verde-claro); color: #22543d; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .section-title { margin: 25px 0 12px 0; color: var(--azul-escuro); font-weight: 500; font-size: 1em; }
+        .month-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+        .month-tab { padding: 7px 16px; border-radius: 18px; border: 2px solid var(--cinza-medio); background: var(--branco); cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        .month-tab:hover { border-color: var(--azul-claro); }
+        .month-tab.active { background: var(--azul-medio); color: white; border-color: var(--azul-medio); }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 18px; align-items: center; flex-wrap: wrap; background: var(--branco); padding: 12px 16px; border-radius: 10px; border: 1px solid var(--cinza-medio); }
+        .filter-bar select, .filter-bar input { padding: 8px 12px; border: 2px solid var(--cinza-medio); border-radius: 6px; font-size: 12px; }
+        .legenda { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.78em; color: var(--texto-claro); }
+        .legenda-item { display: flex; align-items: center; gap: 5px; }
+        .legenda-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+        .legenda-dot.ld-ok { background: var(--verde-claro); }
+        .legenda-dot.ld-mes-anterior { background: var(--amarelo-claro); }
+        .legenda-dot.ld-repetente { background: var(--danger-claro); }
+        .estoque-card { background: var(--branco); border-radius: 12px; padding: 15px; border: 1px solid var(--cinza-medio); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .estoque-card.estoque-baixo { border-left: 4px solid var(--danger); background: var(--danger-claro); }
+        .estoque-card.estoque-medio { border-left: 4px solid var(--warning); background: var(--warning-claro); }
+        .estoque-card.estoque-ok { border-left: 4px solid var(--verde-vibrante); }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--branco); border-radius: 16px; padding: 25px; max-width: 650px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 25px 70px rgba(0,0,0,0.4); }
+        .sync-info { margin-top: 10px; font-size: 0.8em; color: var(--texto-claro); }
+        .footer { text-align: center; padding: 12px; background: var(--azul-escuro); color: rgba(255,255,255,0.7); font-size: 0.72em; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .footer-version { background: rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 10px; font-weight: 500; }
+        .config-section { margin-bottom: 15px; padding: 12px; background: var(--cinza-claro); border-radius: 8px; border: 1px solid var(--cinza-medio); }
+        .config-section h4 { color: var(--azul-escuro); margin-bottom: 8px; font-size: 0.9em; }
+        .config-section label { display: block; font-size: 0.8em; color: var(--texto); margin-bottom: 4px; font-weight: 600; }
+        .config-section input, .config-section select, .config-section textarea { width: 100%; padding: 8px 10px; border: 2px solid var(--cinza-medio); border-radius: 6px; font-size: 12px; margin-bottom: 8px; font-family: inherit; }
+        .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .config-info { font-size: 0.75em; color: var(--texto-claro); margin-bottom: 8px; font-style: italic; }
+        .config-tabs { display: flex; gap: 4px; margin-bottom: 15px; border-bottom: 2px solid var(--cinza-medio); }
+        .config-tab { padding: 8px 16px; cursor: pointer; font-size: 0.8em; font-weight: 600; color: var(--texto-claro); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .config-tab:hover { color: var(--azul-escuro); }
+        .config-tab.active { color: var(--azul-medio); border-bottom-color: var(--azul-medio); }
+        .config-panel { display: none; }
+        .config-panel.active { display: block; }
+        
+        .botoes-navegacao { position: fixed; bottom: 100px; right: 20px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+        .btn-navegacao { width: 45px; height: 45px; border-radius: 50%; border: none; background: var(--azul-medio); color: white; font-size: 1.3em; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .btn-navegacao.visivel { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .btn-navegacao:hover { background: var(--azul-escuro); transform: scale(1.1); }
+        .btn-base { background: var(--verde-vibrante); }
+        .btn-base:hover { background: #2f855a; }
+        
+        @media (max-width: 768px) {
+            .header { flex-direction: column; text-align: center; }
+            .nav-tab { padding: 12px 15px; font-size: 0.8em; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-grid { grid-template-columns: 1fr; }
+            .btn-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-registro" id="statusFlutuante"></div>
+    
+    <div class="botoes-navegacao">
+        <button class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Voltar ao topo">⬆</button>
+        <button class="btn-navegacao btn-base" onclick="irParaBase()" title="Ir para o final">⬇</button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-logo">
+                <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="48" r="38" fill="white"/><circle cx="50" cy="48" r="38" fill="none" stroke="#4db8b0" stroke-width="3"/><circle cx="50" cy="48" r="36" fill="none" stroke="#1a3a5c" stroke-width="1.5"/>
+                    <rect x="27" y="28" width="16" height="9" rx="4.5" fill="white" stroke="#5b9bd5" stroke-width="1.5"/><rect x="43" y="28" width="16" height="9" rx="4.5" fill="#5b9bd5"/>
+                    <polyline points="33,32.5 37,36.5 43,30.5" fill="none" stroke="#38a169" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <text x="50" y="60" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#1a3a5c" font-weight="bold">Assistência</text>
+                    <text x="50" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#5b9bd5" stroke="#1a3a5c" stroke-width="0.8" font-weight="bold">Farmacêutica</text>
+                    <text x="50" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="5" fill="#1a3a5c">Campo do Tenente - PR</text>
+                </svg>
+                <div class="header-info"><h1>Assistência Farmacêutica</h1><p class="subtitle">Campo do Tenente - PR</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="btn btn-sm btn-outline" onclick="abrirConfig()" style="color:white;border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);font-size:1.1em;" title="Painel de Configurações">⚙️</button>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);padding:8px 16px;border-radius:50px;font-size:0.85em;color:white;">
+                    <div id="statusDot" style="width:10px;height:10px;border-radius:50%;background:#ffa500;"></div><span id="statusText">Pronto</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="trocarModulo('controlados')">💊 Controlados <span class="nav-tab-badge">344/98</span></div>
+            <div class="nav-tab" onclick="trocarModulo('especiais')">💉 Especiais <span class="nav-tab-badge">Estoque</span></div>
+        </div>
+        
+        <div class="content">
+            <div class="modulo active" id="modulo-controlados">
+                <div class="dashboard-header"><h2>📊 Dashboard - Controlados</h2><div class="mes-selector"><label>📅 Mês:</label><select id="dashboardMesControlados" onchange="atualizarDashboardControlados()"><option value="atual">Mês Atual</option></select></div></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="ctrlTotal">0</div><small id="ctrlMesLabel">Mês atual</small></div>
+                    <div class="stat-card"><h3>⚠️ Repetentes</h3><div class="number" id="ctrlRepetentes">0</div><small>mesmo medicamento</small></div>
+                    <div class="stat-card"><h3>👥 Pacientes</h3><div class="number" id="ctrlPacientes">0</div><small>no mês</small></div>
+                    <div class="stat-card"><h3>💊 Medicamentos</h3><div class="number" id="ctrlMeds">0</div><small>diferentes</small></div>
+                </div>
+                <div class="form-section">
+                    <h2>📝 Nova Dispensação - Controlado</h2>
+                    <div class="info-box">🔴 <strong>Repetente:</strong> Mesmo paciente + mesmo medicamento no <strong>mesmo mês</strong>.<br>🟡 <strong>Mês Anterior:</strong> Mesmo paciente + mesmo medicamento no <strong>mês passado</strong>.</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="ctrlData" required onchange="verificarRepetenteCtrl()"></div>
+                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="ctrlPaciente" placeholder="Nome completo" required oninput="verificarRepetenteCtrl()"></div>
+                        <div class="form-group"><label>💊 Medicamento *</label><select id="ctrlMedicamento" required onchange="verificarRepetenteCtrl()"><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="ctrlQuantidade" min="1" placeholder="Ex: 30" required></div>
+                        <div class="form-group"><label>👨‍⚕️ Responsável *</label><select id="ctrlResponsavel" required><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>🔁 Status</label><input type="text" id="ctrlRepetente" readonly value="Preencha os campos"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="registrarControlado()">💊 Registrar</button>
+                        <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
+                        <button class="btn btn-warning" onclick="exportarCSVCtrl()">📥 Exportar</button>
+                    </div>
+                    <div class="sync-info" id="syncInfoCtrl">🔄 Google Sheets API</div>
+                </div>
+                <h3 class="section-title">📂 Histórico</h3>
+                <div class="legenda"><span class="legenda-item"><span class="legenda-dot ld-ok"></span> ✅ Não</span><span class="legenda-item"><span class="legenda-dot ld-mes-anterior"></span> 🟡 Mês Anterior</span><span class="legenda-item"><span class="legenda-dot ld-repetente"></span> 🔴 Sim</span></div>
+                <div class="month-tabs" id="ctrlMonthTabs"><div class="month-tab active" onclick="filtrarCtrlMes('todos')">📋 Todos</div></div>
+                <div class="filter-bar"><select id="ctrlFiltroMed" onchange="aplicarFiltrosCtrl()"><option value="todos">Todos</option></select><input type="text" id="ctrlFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosCtrl()"><span id="ctrlResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Qtd</th><th>Responsável</th><th>Repetente</th></tr></thead><tbody id="ctrlTabela"><tr><td colspan="6" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
+                <h3 class="section-title">📈 Contagem - <span id="ctrlTituloContagem"></span></h3>
+                <div class="table-wrapper"><table><thead><tr><th>Medicamento</th><th>Qtd Total</th><th>Pacientes</th><th>Alertas</th></tr></thead><tbody id="ctrlTabelaContagem"><tr><td colspan="4" style="text-align:center;padding:30px;">Selecione um mês</td></tr></tbody></table></div>
+            </div>
+            
+            <div class="modulo" id="modulo-especiais">
+                <div class="dashboard-header"><h2>📊 Dashboard - Especiais</h2><div class="mes-selector"><label>📅 Mês:</label><select id="dashboardMesEspeciais" onchange="atualizarDashboardEspeciais()"><option value="atual">Mês Atual</option></select></div></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="espTotal">0</div><small id="espMesLabel">Mês atual</small></div>
+                    <div class="stat-card"><h3>📦 Ferro</h3><div class="number" id="espEstoqueFerro">0</div><small>ampolas</small></div>
+                    <div class="stat-card"><h3>📦 Enoxaparina</h3><div class="number" id="espEstoqueEnoxa">0</div><small>seringas</small></div>
+                    <div class="stat-card"><h3>👥 Pacientes</h3><div class="number" id="espPacientes">0</div><small>no mês</small></div>
+                </div>
+                <h3 class="section-title">📦 Status do Estoque</h3><div id="estoqueStatus"></div>
+                <div class="form-section">
+                    <h2>📝 Nova Dispensação - Especial</h2>
+                    <div class="form-grid">
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="espData" required></div>
+                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="espPaciente" placeholder="Nome completo" required></div>
+                        <div class="form-group"><label>💉 Medicamento *</label><select id="espMedicamento" required onchange="atualizarEstoqueDisponivel()"><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>📦 Ampolas *</label><input type="number" id="espAmpolas" min="1" placeholder="Ex: 3" required oninput="atualizarEstoqueDisponivel()"></div>
+                        <div class="form-group"><label>👨‍⚕️ Prescritor *</label><input type="text" id="espPrescritor" placeholder="Nome do médico" required></div>
+                        <div class="form-group"><label>🔄 Amp/Ciclo</label><input type="number" id="espAmpolasCiclo" min="1" placeholder="Ex: 10"></div>
+                        <div class="form-group"><label>🔁 Ciclos EV</label><input type="number" id="espCiclosEV" min="1" placeholder="Ex: 3"></div>
+                        <div class="form-group"><label>📋 Estoque</label><input type="text" id="espEstoqueDisponivel" readonly value="Selecione o medicamento"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-roxo" onclick="registrarEspecial()">💉 Registrar</button>
+                        <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
+                        <button class="btn btn-warning" onclick="abrirEntradaEstoque()">📥 Entrada</button>
+                        <button class="btn btn-info" onclick="exportarCSVEsp()">📤 Exportar</button>
+                    </div>
+                    <div class="sync-info" id="syncInfoEsp">🔄 Google Sheets API</div>
+                </div>
+                <h3 class="section-title">📂 Histórico</h3>
+                <div class="month-tabs" id="espMonthTabs"><div class="month-tab active" onclick="filtrarEspMes('todos')">📋 Todos</div></div>
+                <div class="filter-bar"><select id="espFiltroMed" onchange="aplicarFiltrosEsp()"><option value="todos">Todos</option></select><input type="text" id="espFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosEsp()"><span id="espResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Amp</th><th>Prescritor</th><th>A/C</th><th>EV</th></tr></thead><tbody id="espTabela"><tr><td colspan="7" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
+            </div>
+        </div>
+        
+        <div class="footer"><span>Assistência Farmacêutica - Campo do Tenente/PR</span><span>|</span><span>Sistema de Controle de Medicamentos</span><span class="footer-version">📦 v2.4</span></div>
+    </div>
+    
+    <div id="modalEntradaEstoque" class="modal"><div class="modal-content" style="max-width:450px;"><h3 style="margin-bottom:12px;">📥 Entrada de Estoque</h3><div class="form-grid"><div class="form-group"><label>💉 Medicamento</label><select id="entradaMedicamento"><option value="">Selecione</option></select></div><div class="form-group"><label>📦 Quantidade</label><input type="number" id="entradaQuantidade" min="1" placeholder="Ex: 50"></div></div><div class="btn-group" style="margin-top:15px;"><button class="btn btn-success" onclick="registrarEntradaEstoque()">📥 Registrar</button><button class="btn" onclick="fecharModal('modalEntradaEstoque')" style="background:#a0aec0;color:white;">Cancelar</button></div></div></div>
+    
+    <div id="modalConfig" class="modal"><div class="modal-content"><h3 style="margin-bottom:12px;color:var(--azul-escuro);">⚙️ Painel de Configurações</h3><p style="font-size:0.8em;color:var(--texto-claro);margin-bottom:15px;">📦 v<span id="configVersao"></span> | 🔐 Google Sheets API | 💾 Dados locais</p>
+    <div class="config-tabs"><div class="config-tab active" onclick="trocarConfigTab('medicamentos')">💊 Medicamentos</div><div class="config-tab" onclick="trocarConfigTab('limites')">📊 Limites</div><div class="config-tab" onclick="trocarConfigTab('backup')">💾 Backup</div><div class="config-tab" onclick="trocarConfigTab('sobre')">ℹ️ Sobre</div></div>
+    <div class="config-panel active" id="configPanel-medicamentos"><div class="config-section"><h4>💊 Controlados</h4><textarea id="cfgMedsCtrl" rows="10" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>👨‍⚕️ Responsáveis</h4><textarea id="cfgResps" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>💉 Especiais</h4><textarea id="cfgMedsEsp" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><button class="btn btn-primary" onclick="salvarConfigMedicamentos()">💾 Salvar</button></div>
+    <div class="config-panel" id="configPanel-limites"><div class="config-section"><h4>📦 Limites de Estoque</h4><div class="config-row"><div><label>🔴 Crítico (≤)</label><input type="number" id="cfgEstoqueCritico" min="0" value="5"></div><div><label>🟡 Baixo (≤)</label><input type="number" id="cfgEstoqueBaixo" min="0" value="15"></div></div></div><button class="btn btn-primary" onclick="salvarConfigLimites()">💾 Salvar</button></div>
+    <div class="config-panel" id="configPanel-backup"><div class="config-section"><h4>💾 Exportar/Importar</h4><p class="config-info">Exporte configurações para arquivo.</p><div style="display:flex;gap:8px;"><button class="btn btn-info btn-sm" onclick="exportarConfig()">📥 Exportar</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('importConfigFile').click()">📤 Importar</button><input type="file" id="importConfigFile" accept=".json" style="display:none;" onchange="importarConfig(event)"></div></div><div class="config-section"><h4>🔄 Resetar</h4><p class="config-info" style="color:var(--danger);">Apaga dados locais.</p><button class="btn btn-danger btn-sm" onclick="resetarDadosLocais()">🗑️ Limpar</button></div></div>
+    <div class="config-panel" id="configPanel-sobre"><div class="config-section"><h4>ℹ️ Sobre</h4><p style="font-size:0.85em;line-height:1.6;"><strong>Assistência Farmacêutica</strong><br>Campo do Tenente - PR<br><br><strong>Versão:</strong> <span id="configVersaoSobre"></span><br><strong>Módulos:</strong> Controlados + Especiais<br><strong>Conexão:</strong> Google Sheets API<br><br>✅ Registro de dispensações<br>✅ Detecção de repetentes<br>✅ Controle de estoque<br>✅ Dashboard mensal<br>✅ Exportação CSV<br>✅ Painel de configurações<br>✅ Botões de navegação<br>✅ Status flutuante</p></div></div>
+    <div style="margin-top:15px;text-align:right;"><button class="btn" onclick="fecharModal('modalConfig')" style="background:#a0aec0;color:white;">Fechar</button></div></div></div>
+
+<script>
+// ==================== CONFIGURAÇÃO (v2.4 - GitHub Ready) ====================
+const API_KEY = 'AIzaSyDF8DR0bd2je4qmZiAtdLPy2FS1Ssea3rk';
+const CLIENT_EMAIL = 'site-controlados@site-controlados.iam.gserviceaccount.com';
+// Chave protegida
+const _k = ['-----BEGIN PRIVATE KEY-----','MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCez1jZWdp41jiW','sWcB8a8FGTWbij/0MYwhmYDHTgWoA/1SS7+ZNyapzzeT1Tb7S36soicPG3y5TFrn','n6SAxYpJRcBouNq7qyrrR/YVJGjolHIBtA8MCE+y3ZrmGXaUNzTCAtp7ldIsEC9Y','GfKXPwKym37gQqyoSP8VDBrIHEpnHv77cEAK2SSBJ0zxjPfJuU5hutpbqy4x7+DF','17Oa05+HlxqD72XE7gER7KegdsQZZcKxDFKHglkKfeE4fyzZUaHd8C0TWJotgSus','tpGaY9MdoPYkYbBjnIkh5SsRmacpR7E6w/MM1T7E4RTYJPfd4G+HRI8TiUbbOcXI','O+V66LRbAgMBAAECggEAGPqWct13XRaeIP8Mq4QcWh9xzKINVsyXn3ikW5+R3oWo','ydHLSan15V4H/l3aKjg2LP4g9EyHrMzt5s0NPrSTgIc9m9so4GgsYISEQtAOxjev','H5shhhbP6QYtL9sPySv5GuOrAib5v1+Dqtut9LcppqE0RB7d8bxFjvBv9/YR3S/b','T4U9DDuo29seRszoVcmtcEA+dZYnbMRwKuoxK8ULm6/thepQMSOYjcK4mib1hV3d','Kjawm+wyOSI/R0DU+BwoWCuy0DxOPeguq+cffKnqhuIeVXxm5aKho8bLOTY1isgI','xQWQXkZzsrbc6B7J7ilsLeBYKXus4x+IlswBEsthAQKBgQDKsNJqTYCwPD4Bx0fn','oQdiA4b/uOU9GqfibffjCX6IBGGYBRA6V320/ZZpqLWzUFeHEKLq9h6ND1xdotNZ','cdU9HKfrS2hspC8T2Fnj5NBZYeXpHoNGOeUL1PxdRCNOYokheZQpcLGyHEiHkIaf','eI8kZJhTeWArbdqKlAyhyRXnAQKBgQDIlAfglsWpkoIAveL81B7FsJMcSl8RZg9q','6FZB5+WFXOrNQ6hT7x0zH8hxj5NHTlNSfCktnycwM49nzpspDE5vGli8M3gqNApP','hfjqjz306xY3vGkGKkqYUIdT6wE7iKOkxHxMMdSI0UcZcnUn3auIxIcv0ooRr0O2','m4C6wt6XWwKBgGdjXGEW2V6LzAEyOk4/SDnJnNHR6TSK5TnNaBUp4Z3VxkY5xvZL','bHamp1OL1+r4Pz1I0iFRm3HOdQnaJT5Jn0CF3m1Z0JEiClVwFSH2tAPzuMd5ZfKr','U1b+tB+KwwuXnWUy081zi2BTpvdnVBQB9dnVahGiJtjgNwpazDq2DHMBAoGBAKNH','jhoP4pyl/VppOayjaOF5Wmg/SqC5OnfG5uEDy94Cw8mQ+ChLkLObfeqj/Dqh0kZl','eIgA9T/R2T2h/MEvmXHsOqwKIhoI/xO5deZL8R29efqpT72LE+pmM6PmvLwgAUcS','BDVqox81bfGTMTfgxdCyW3Jcq7S1viOa9vIRzG3dAoGBAK3ZUON5DgRtIAhXWnoB','cmja16TNce1DDFUBpvQn4xKYG52m8MeIZPOG3XSWu7nxJlxh52V/NeRttSkevI/w','9sTtcevUuXsX7mn/3+rXuVrmnMD+aTQZWL54kNXv07AFOxMj4kEKhKFnmT2B8cTz','rzAZqla6RJ0c6JnjDsnjaWaZ','-----END PRIVATE KEY-----'];
+const PRIVATE_KEY = _k.join('\n').replace(/\n/g, '\n');
+
+const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
+const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
+const VERSAO = '2.4';
+
+const MEDICAMENTOS_CTRL = ["Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg","Clomipramina 25mg","Clorpromazina 25mg","Clorpromazina 100mg","Carbamazepina Susp.","Clonazepam Sol.","Diazepam 5mg","Fenitoína 100mg","Fenobarbital 100mg","Fenobarbital Sol. 4%","Fluoxetina 20 mg","Haloperidol 1mg","Haloperidol 5mg","Decanoato de haloperidol","Nortriptilina 25mg","Oxcarbamazepina 60mg/mL","Sertralina 50mg","Ácido Valproico 250mg","Valproato de sódio 500mg","Valproato de sódio Xpe.","Divaproato de sódio","Talidomida"];
+const MEDICAMENTOS_ESP = ["Sacarato de Óxido Férrico 20mg/mL injetável","Enoxaparina 40mg/0,4mL"];
+const RESPONSAVEIS = ["Dr. João Silva","Dra. Maria Santos","Enf. Carlos Oliveira","Farm. Ana Pereira","Dr. Pedro Costa","Enf. Lucia Ferreira"];
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+let registrosCtrl=[], registrosEsp=[], estoque={};
+let medicamentosAtivosCtrl=[...MEDICAMENTOS_CTRL], responsaveisAtivos=[...RESPONSAVEIS];
+let mesCtrl='todos', mesEsp='todos', dashboardMesCtrl=null, dashboardMesEsp=null, token=null;
+let cfgEstoqueCritico=parseInt(localStorage.getItem('cfg_estoque_critico')||'5');
+let cfgEstoqueBaixo=parseInt(localStorage.getItem('cfg_estoque_baixo')||'15');
+
+function inicializar(){
+    medicamentosAtivosCtrl=JSON.parse(localStorage.getItem('meds_344')||'null')||[...MEDICAMENTOS_CTRL];
+    responsaveisAtivos=JSON.parse(localStorage.getItem('resps_344')||'null')||[...RESPONSAVEIS];
+    registrosCtrl=JSON.parse(localStorage.getItem('registros_344')||'[]');
+    registrosEsp=JSON.parse(localStorage.getItem('registros_esp')||'[]');
+    estoque=JSON.parse(localStorage.getItem('estoque_esp')||'{"Sacarato de Óxido Férrico 20mg/mL injetável":0,"Enoxaparina 40mg/0,4mL":0}');
+    dashboardMesCtrl=localStorage.getItem('dashboard_mes_344')||null;
+    dashboardMesEsp=localStorage.getItem('dashboard_mes_esp')||null;
+    carregarSelectsCtrl();carregarSelectsEsp();carregarDashboardCtrl();carregarDashboardEsp();
+    document.getElementById('ctrlData').valueAsDate=new Date();
+    document.getElementById('espData').valueAsDate=new Date();
+    document.getElementById('ctrlTituloContagem').textContent=MESES[new Date().getMonth()];
+    atualizarModuloControlados();atualizarModuloEspeciais();sincronizarTudo();
+    console.log('🚀 v2.4 - GitHub Ready');
+}
+
+function trocarModulo(m){
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.modulo').forEach(m=>m.classList.remove('active'));
+    if(m==='controlados'){document.querySelector('.nav-tab:nth-child(1)').classList.add('active');document.getElementById('modulo-controlados').classList.add('active');}
+    else{document.querySelector('.nav-tab:nth-child(2)').classList.add('active');document.getElementById('modulo-especiais').classList.add('active');}
+}
+
+// ==================== GOOGLE API ====================
+async function getToken(){
+    const h={alg:'RS256',typ:'JWT'};const n=Math.floor(Date.now()/1000);
+    const c={iss:CLIENT_EMAIL,scope:'https://www.googleapis.com/auth/spreadsheets',aud:'https://oauth2.googleapis.com/token',exp:n+3600,iat:n};
+    const b64=o=>btoa(JSON.stringify(o)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    const j=`${b64(h)}.${b64(c)}`;
+    const kd=PRIVATE_KEY.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g,'');
+    const bk=Uint8Array.from(atob(kd),c=>c.charCodeAt(0));
+    const ck=await crypto.subtle.importKey('pkcs8',bk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+    const sg=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',ck,new TextEncoder().encode(j));
+    const sj=`${j}.${btoa(String.fromCharCode(...new Uint8Array(sg))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}`;
+    const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sj}`});
+    token=(await r.json()).access_token;return token;
+}
+async function lerPlanilha(id,range){
+    if(!token)await getToken();
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}`,{headers:{Authorization:`Bearer ${token}`}});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    return(await r.json()).values||[];
+}
+async function escreverPlanilha(id,range,values){
+    if(!token)await getToken();
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({values:[values]})});
+    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||`HTTP ${r.status}`);}
+    return await r.json();
+}
+async function sincronizarTudo(){
+    const sd=document.getElementById('statusDot'),st=document.getElementById('statusText');
+    sd.style.background='#ffa500';st.textContent='Sincronizando...';
+    try{
+        const dc=await lerPlanilha(SHEET_ID_CTRL,'Registros!A1:F1000');
+        if(dc.length>1){registrosCtrl=dc.slice(1).filter(r=>r.length>=5&&r[1]&&r[2]).map(r=>({data:nData(r[0]||''),paciente:(r[1]||'').trim(),medicamento:(r[2]||'').trim(),quantidade:parseFloat((r[3]||'0').toString().replace(',','.'))||0,responsavel:(r[4]||'').trim(),repetente:(r[5]||'Não').trim()}));localStorage.setItem('registros_344',JSON.stringify(registrosCtrl));}
+        try{
+            const de=await lerPlanilha(SHEET_ID_ESP,'Página1!A1:H1000');
+            if(de.length>1){registrosEsp=de.slice(1).filter(r=>r.length>=5&&r[1]&&r[2]).map(r=>({data:nData(r[0]||''),paciente:(r[1]||'').trim(),medicamento:(r[2]||'').trim(),ampolas:parseInt(r[3])||0,prescritor:(r[4]||'').trim(),ampolasCiclo:parseInt(r[5])||0,ciclosEV:parseInt(r[6])||0,estoque:parseInt(r[7])||0}));localStorage.setItem('registros_esp',JSON.stringify(registrosEsp));MEDICAMENTOS_ESP.forEach(m=>{const u=registrosEsp.filter(r=>r.medicamento===m).pop();if(u)estoque[m]=u.estoque;});localStorage.setItem('estoque_esp',JSON.stringify(estoque));}
+        }catch(e){console.log('Especiais:',e.message);}
+        sd.style.background='#48bb78';st.textContent='✅ Conectado';
+    }catch(e){console.error(e);sd.style.background='#f56565';st.textContent='⚠️ Erro';}
+    carregarDashboardCtrl();carregarDashboardEsp();atualizarModuloControlados();atualizarModuloEspeciais();
+}
+function nData(s){if(!s)return'';s=String(s).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(s.includes('/')){const p=s.split('/');if(p.length===3)return`${p[2].padStart(4,'20')}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;}try{const d=new Date(s);if(!isNaN(d.getTime()))return d.toISOString().split('T')[0];}catch(e){}return s;}
+function fData(s){if(!s)return'';try{const p=s.split('-');if(p.length===3)return`${p[2]}/${p[1]}/${p[0]}`;}catch(e){}return s;}
+
+// ==================== STATUS + NAVEGAÇÃO ====================
+function mostrarStatus(m,tipo){
+    const s=document.getElementById('statusFlutuante');
+    s.textContent=m;s.className=`status-registro status-${tipo}`;s.style.display='block';
+    setTimeout(()=>{s.style.display='none';},4000);
+}
+function irParaTopo(){window.scrollTo({top:0,behavior:'smooth'});}
+function irParaBase(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});}
+window.addEventListener('scroll',function(){
+    const b=document.querySelectorAll('.btn-navegacao');
+    const s=window.pageYOffset||document.documentElement.scrollTop;
+    if(s>300){b.forEach(btn=>btn.classList.add('visivel'));}else{b.forEach(btn=>btn.classList.remove('visivel'));}
+});
+
+// ==================== CONTROLADOS ====================
+function carregarSelectsCtrl(){
+    document.getElementById('ctrlMedicamento').innerHTML='<option value="">Selecione</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
+    document.getElementById('ctrlFiltroMed').innerHTML='<option value="todos">Todos</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
+    document.getElementById('ctrlResponsavel').innerHTML='<option value="">Selecione</option>'+responsaveisAtivos.map(r=>`<option value="${r}">${r}</option>`).join('');
+}
+function carregarDashboardCtrl(){
+    const s=document.getElementById('dashboardMesControlados');s.innerHTML='<option value="atual">Mês Atual</option>';
+    const m=new Set();registrosCtrl.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)m.add(`${p[0]}-${parseInt(p[1])-1}`);}});
+    Array.from(m).sort().reverse().forEach(k=>{const[a,me]=k.split('-').map(Number);s.innerHTML+=`<option value="${k}" ${dashboardMesCtrl===k?'selected':''}>${MESES[me]} de ${a}</option>`;});
+    if(dashboardMesCtrl&&m.has(dashboardMesCtrl))s.value=dashboardMesCtrl;
+}
+function verificarRepetenteCtrl(){
+    const p=document.getElementById('ctrlPaciente').value.trim(),m=document.getElementById('ctrlMedicamento').value,d=document.getElementById('ctrlData').value,i=document.getElementById('ctrlRepetente');
+    if(!p||!m||!d){i.value='Preencha os campos';i.style.cssText='';return;}
+    const pd=d.split('-');if(pd.length<2)return;
+    const as=parseInt(pd[0]),ms=parseInt(pd[1])-1,pn=p.toLowerCase().trim(),mn=m.toLowerCase().trim();
+    const mm=registrosCtrl.filter(r=>{if(!r.data)return false;const pr=r.data.split('-');if(pr.length<2)return false;return parseInt(pr[1])-1===ms&&parseInt(pr[0])===as&&(r.paciente||'').toLowerCase().trim()===pn&&(r.medicamento||'').toLowerCase().trim()===mn;});
+    let ma=ms-1,aa=as;if(ma<0){ma=11;aa--;}
+    const me=registrosCtrl.filter(r=>{if(!r.data)return false;const pr=r.data.split('-');if(pr.length<2)return false;return parseInt(pr[1])-1===ma&&parseInt(pr[0])===aa&&(r.paciente||'').toLowerCase().trim()===pn&&(r.medicamento||'').toLowerCase().trim()===mn;});
+    if(mm.length>0){i.value=`🔴 REPETENTE (Sim) - ${p} já retirou ${m} ${mm.length}x em ${MESES[ms]}!`;i.style.cssText='color:#e53e3e!important;background:#fed7d7!important;border-color:#e53e3e!important;';}
+    else if(me.length>0){i.value=`🟡 MÊS ANTERIOR - ${p} retirou ${m} em ${MESES[ma]}/${aa}`;i.style.cssText='color:#975a16!important;background:#fefcbf!important;border-color:#ecc94b!important;';}
+    else{i.value=`✅ NORMAL (Não) - Primeira dispensação`;i.style.cssText='color:#38a169!important;background:#c6f6d5!important;';}
+}
+async function registrarControlado(){
+    const d=document.getElementById('ctrlData').value,p=document.getElementById('ctrlPaciente').value.trim(),m=document.getElementById('ctrlMedicamento').value,q=parseFloat(document.getElementById('ctrlQuantidade').value.toString().replace(',','.')),r=document.getElementById('ctrlResponsavel').value,ri=document.getElementById('ctrlRepetente').value;
+    if(!d||!p||!m||!q||!r)return mostrarStatus('⚠️ Preencha todos os campos obrigatórios!','alerta');
+    if(q<=0)return mostrarStatus('⚠️ Quantidade deve ser maior que zero!','alerta');
+    let rep='Não';if(ri.includes('REPETENTE (Sim)'))rep='Sim';else if(ri.includes('MÊS ANTERIOR'))rep='Mês Anterior';
+    registrosCtrl.push({data:d,paciente:p,medicamento:m,quantidade:q,responsavel:r,repetente:rep});
+    localStorage.setItem('registros_344',JSON.stringify(registrosCtrl));
+    try{
+        await escreverPlanilha(SHEET_ID_CTRL,'Registros!A:F',[d,p,m,q,r,rep]);
+        if(rep==='Sim')mostrarStatus(`🔴 REPETENTE!\n${p} - ${m}\nRegistrado na planilha com sucesso!`,'alerta');
+        else if(rep==='Mês Anterior')mostrarStatus(`🟡 MÊS ANTERIOR!\n${p} - ${m}\nRegistrado na planilha com sucesso!`,'info');
+        else mostrarStatus(`✅ SUCESSO!\n${p} - ${m} (${q} un.)\nRegistrado na planilha!`,'sucesso');
+    }catch(e){mostrarStatus(`⚠️ Salvo localmente\n${p} - ${m}\nSincronize depois.`,'erro');}
+    ['ctrlPaciente','ctrlMedicamento','ctrlQuantidade','ctrlResponsavel'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('ctrlRepetente').value='Preencha os campos';document.getElementById('ctrlRepetente').style.cssText='';
+    document.getElementById('ctrlData').valueAsDate=new Date();
+    const ds=document.getElementById('dashboardMesControlados');if(ds.value!=='atual'){dashboardMesCtrl=ds.value;localStorage.setItem('dashboard_mes_344',dashboardMesCtrl);}
+    carregarDashboardCtrl();atualizarModuloControlados();
+}
+function atualizarDashboardControlados(){
+    const s=document.getElementById('dashboardMesControlados'),v=s.value;
+    if(v!=='atual'){dashboardMesCtrl=v;localStorage.setItem('dashboard_mes_344',dashboardMesCtrl);}else{dashboardMesCtrl=null;localStorage.removeItem('dashboard_mes_344');}
+    let mf,af,nm;if(v==='atual'){const h=new Date();mf=h.getMonth();af=h.getFullYear();nm=MESES[mf];}else{const[a,me]=v.split('-').map(Number);mf=me;af=a;nm=MESES[me];}
+    document.getElementById('ctrlMesLabel').textContent=`${nm} de ${af}`;
+    const rf=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
+    document.getElementById('ctrlTotal').textContent=rf.length;document.getElementById('ctrlRepetentes').textContent=rf.filter(r=>r.repetente==='Sim').length;
+    document.getElementById('ctrlPacientes').textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;document.getElementById('ctrlMeds').textContent=new Set(rf.map(r=>r.medicamento)).size;
+}
+function filtrarCtrlMes(m){mesCtrl=m;atualizarModuloControlados();}
+function aplicarFiltrosCtrl(){
+    const fm=document.getElementById('ctrlFiltroMed').value,fp=document.getElementById('ctrlFiltroPaciente').value.toLowerCase();let d=[...registrosCtrl];
+    if(mesCtrl!=='todos')d=d.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&MESES[parseInt(p[1])-1]===mesCtrl;});
+    if(fm!=='todos')d=d.filter(r=>r.medicamento===fm);if(fp)d=d.filter(r=>r.paciente.toLowerCase().includes(fp));
+    d.sort((a,b)=>(b.data||'').localeCompare(a.data||''));document.getElementById('ctrlResultCount').textContent=`${d.length} registro(s)`;
+    const tb=document.getElementById('ctrlTabela');if(d.length===0){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
+    tb.innerHTML=d.map(r=>{let bc='badge-ok',bt='✅ Não';if(r.repetente==='Sim'){bc='badge-alert';bt='🔴 Sim';}else if(r.repetente==='Mês Anterior'){bc='badge-mes-anterior';bt='🟡 Mês Ant.';}return`<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.quantidade}</td><td>${r.responsavel}</td><td><span class="badge ${bc}">${bt}</span></td></tr>`;}).join('');
+}
+function atualizarContagemCtrl(){
+    const ma=new Date().getMonth(),aa=new Date().getFullYear();let mf=ma,af=aa;if(mesCtrl!=='todos'){mf=MESES.indexOf(mesCtrl);if(mf<0)mf=ma;}
+    const rm=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
+    document.getElementById('ctrlTituloContagem').textContent=mesCtrl!=='todos'?mesCtrl:MESES[ma];
+    const ct={};rm.forEach(r=>{if(!ct[r.medicamento])ct[r.medicamento]={q:0,p:new Set(),a:0};ct[r.medicamento].q+=r.quantidade;ct[r.medicamento].p.add(r.paciente.toLowerCase());if(r.repetente!=='Não')ct[r.medicamento].a++;});
+    const tb=document.getElementById('ctrlTabelaContagem');if(Object.keys(ct).length===0){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum dado</td></tr>';return;}
+    tb.innerHTML=Object.entries(ct).sort((a,b)=>b[1].q-a[1].q).map(([m,d])=>`<tr><td><strong>${m}</strong></td><td>${d.q.toFixed(2)}</td><td>${d.p.size}</td><td>${d.a>0?`<span class="badge badge-alert">⚠️ ${d.a}</span>`:'<span class="badge badge-ok">✅ 0</span>'}</td></tr>`).join('');
+}
+function atualizarModuloControlados(){carregarDashboardCtrl();carregarSelectsCtrl();
+    const tc=document.getElementById('ctrlMonthTabs');tc.innerHTML=`<div class="month-tab ${mesCtrl==='todos'?'active':''}" onclick="filtrarCtrlMes('todos')">📋 Todos</div>`;
+    const mc=new Set();registrosCtrl.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)mc.add(`${parseInt(p[0])}-${parseInt(p[1])-1}`);}});
+    Array.from(mc).sort().forEach(k=>{const[a,me]=k.split('-').map(Number);const nm=MESES[me];const c=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===me&&parseInt(p[0])===a;}).length;tc.innerHTML+=`<div class="month-tab ${mesCtrl===nm?'active':''}" onclick="filtrarCtrlMes('${nm}')">${nm} (${c})</div>`;});
+    atualizarDashboardControlados();aplicarFiltrosCtrl();atualizarContagemCtrl();}
+function exportarCSVCtrl(){if(registrosCtrl.length===0)return mostrarStatus('⚠️ Nenhum registro!','alerta');let csv='Data,Paciente,Medicamento,Quantidade,Responsável,Repetente\n';registrosCtrl.forEach(r=>{csv+=`${fData(r.data)},"${r.paciente}","${r.medicamento}",${r.quantidade},"${r.responsavel}","${r.repetente}"\n`;});const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=`controlados_v${VERSAO}_${new Date().toISOString().split('T')[0]}.csv`;l.click();mostrarStatus('📥 CSV exportado!','sucesso');}
+
+// ==================== ESPECIAIS ====================
+function carregarSelectsEsp(){
+    const sm=document.getElementById('espMedicamento'),sf=document.getElementById('espFiltroMed'),se=document.getElementById('entradaMedicamento');
+    const opts=MEDICAMENTOS_ESP.map(m=>`<option value="${m}">${m}</option>`).join('');
+    sm.innerHTML='<option value="">Selecione</option>'+opts;sf.innerHTML='<option value="todos">Todos</option>'+opts;se.innerHTML='<option value="">Selecione</option>'+opts;
+}
+function carregarDashboardEsp(){
+    const s=document.getElementById('dashboardMesEspeciais');s.innerHTML='<option value="atual">Mês Atual</option>';
+    const m=new Set();registrosEsp.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)m.add(`${p[0]}-${parseInt(p[1])-1}`);}});
+    Array.from(m).sort().reverse().forEach(k=>{const[a,me]=k.split('-').map(Number);s.innerHTML+=`<option value="${k}" ${dashboardMesEsp===k?'selected':''}>${MESES[me]} de ${a}</option>`;});
+    if(dashboardMesEsp&&m.has(dashboardMesEsp))s.value=dashboardMesEsp;
+}
+function atualizarEstoqueDisponivel(){
+    const med=document.getElementById('espMedicamento').value,input=document.getElementById('espEstoqueDisponivel');
+    if(!med){input.value='Selecione o medicamento';input.style.cssText='';return;}
+    const disp=estoque[med]||0;input.value=`${disp} unidades disponíveis`;
+    if(disp<=cfgEstoqueCritico)input.style.cssText='color:#e53e3e!important;background:#fed7d7!important;font-weight:bold;';
+    else if(disp<=cfgEstoqueBaixo)input.style.cssText='color:#975a16!important;background:#fefcbf!important;font-weight:bold;';
+    else input.style.cssText='color:#38a169!important;background:#c6f6d5!important;';
+}
+async function registrarEspecial(){
+    const d=document.getElementById('espData').value,p=document.getElementById('espPaciente').value.trim(),m=document.getElementById('espMedicamento').value,a=parseInt(document.getElementById('espAmpolas').value),pr=document.getElementById('espPrescritor').value.trim(),ac=parseInt(document.getElementById('espAmpolasCiclo').value)||0,cv=parseInt(document.getElementById('espCiclosEV').value)||0;
+    if(!d||!p||!m||!a||!pr)return mostrarStatus('⚠️ Preencha todos os campos!','alerta');
+    if(a<=0)return mostrarStatus('⚠️ Quantidade inválida!','alerta');
+    const ea=estoque[m]||0;if(a>ea)return mostrarStatus(`⚠️ Estoque insuficiente!\nDisponível: ${ea} | Solicitado: ${a}`,'alerta');
+    estoque[m]=ea-a;const ne=estoque[m];localStorage.setItem('estoque_esp',JSON.stringify(estoque));
+    registrosEsp.push({data:d,paciente:p,medicamento:m,ampolas:a,prescritor:pr,ampolasCiclo:ac,ciclosEV:cv,estoque:ne});
+    localStorage.setItem('registros_esp',JSON.stringify(registrosEsp));
+    try{await escreverPlanilha(SHEET_ID_ESP,'Página1!A:H',[d,p,m,a,pr,ac,cv,ne]);mostrarStatus(`✅ DISPENSADO!\n${p} - ${m}\n${a} ampolas | Estoque: ${ne}`,'sucesso');}
+    catch(e){mostrarStatus(`⚠️ Salvo localmente\nEstoque: ${ne}`,'erro');}
+    ['espPaciente','espAmpolas','espPrescritor','espAmpolasCiclo','espCiclosEV'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('espMedicamento').value='';document.getElementById('espEstoqueDisponivel').value='Selecione';document.getElementById('espEstoqueDisponivel').style.cssText='';
+    document.getElementById('espData').valueAsDate=new Date();
+    const ds=document.getElementById('dashboardMesEspeciais');if(ds.value!=='atual'){dashboardMesEsp=ds.value;localStorage.setItem('dashboard_mes_esp',dashboardMesEsp);}
+    carregarDashboardEsp();atualizarModuloEspeciais();
+}
+async function registrarEntradaEstoque(){
+    const m=document.getElementById('entradaMedicamento').value,q=parseInt(document.getElementById('entradaQuantidade').value);
+    if(!m||!q||q<=0){alert('⚠️ Preencha os campos!');return;}
+    estoque[m]=(estoque[m]||0)+q;const ne=estoque[m];localStorage.setItem('estoque_esp',JSON.stringify(estoque));
+    const hoje=new Date().toISOString().split('T')[0];
+    try{await escreverPlanilha(SHEET_ID_ESP,'Página1!A:H',[hoje,'📥 ENTRADA',m,`+${q}`,'Farmácia',0,0,ne]);mostrarStatus(`📥 ENTRADA!\n${m}\n+${q} | Estoque: ${ne}`,'sucesso');}
+    catch(e){mostrarStatus(`⚠️ Salvo localmente`,'erro');}
+    fecharModal('modalEntradaEstoque');atualizarModuloEspeciais();
+}
+function atualizarDashboardEspeciais(){
+    const s=document.getElementById('dashboardMesEspeciais'),v=s.value;
+    if(v!=='atual'){dashboardMesEsp=v;localStorage.setItem('dashboard_mes_esp',dashboardMesEsp);}else{dashboardMesEsp=null;localStorage.removeItem('dashboard_mes_esp');}
+    let mf,af,nm;if(v==='atual'){const h=new Date();mf=h.getMonth();af=h.getFullYear();nm=MESES[mf];}else{const[a,me]=v.split('-').map(Number);mf=me;af=a;nm=MESES[me];}
+    document.getElementById('espMesLabel').textContent=`${nm} de ${af}`;
+    const rf=registrosEsp.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
+    document.getElementById('espTotal').textContent=rf.length;document.getElementById('espEstoqueFerro').textContent=estoque[MEDICAMENTOS_ESP[0]]||0;
+    document.getElementById('espEstoqueEnoxa').textContent=estoque[MEDICAMENTOS_ESP[1]]||0;document.getElementById('espPacientes').textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;
+}
+function atualizarStatusEstoque(){
+    const div=document.getElementById('estoqueStatus');
+    div.innerHTML=MEDICAMENTOS_ESP.map(m=>{const q=estoque[m]||0;let cls='estoque-ok',badge='badge-estoque-ok',status='🟢 Normal',icone='✅';
+        if(q<=cfgEstoqueCritico){cls='estoque-baixo';badge='badge-estoque-baixo';status='🔴 Crítico';icone='🚨';}
+        else if(q<=cfgEstoqueBaixo){cls='estoque-medio';badge='badge-estoque-medio';status='🟡 Baixo';icone='⚠️';}
+        return`<div class="estoque-card ${cls}"><div><strong>${icone} ${m}</strong><br><small><strong>${q}</strong> unidades</small></div><span class="badge ${badge}">${status}</span></div>`;}).join('');
+}
+function filtrarEspMes(m){mesEsp=m;atualizarModuloEspeciais();}
+function aplicarFiltrosEsp(){
+    const fm=document.getElementById('espFiltroMed').value,fp=document.getElementById('espFiltroPaciente').value.toLowerCase();let d=[...registrosEsp];
+    if(mesEsp!=='todos')d=d.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&MESES[parseInt(p[1])-1]===mesEsp;});
+    if(fm!=='todos')d=d.filter(r=>r.medicamento===fm);if(fp)d=d.filter(r=>r.paciente.toLowerCase().includes(fp));
+    d.sort((a,b)=>(b.data||'').localeCompare(a.data||''));document.getElementById('espResultCount').textContent=`${d.length} registro(s)`;
+    const tb=document.getElementById('espTabela');if(d.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
+    tb.innerHTML=d.map(r=>`<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.ampolas}</td><td>${r.prescritor}</td><td>${r.ampolasCiclo||'-'}</td><td>${r.ciclosEV||'-'}</td></tr>`).join('');
+}
+function atualizarModuloEspeciais(){carregarDashboardEsp();carregarSelectsEsp();
+    const tc=document.getElementById('espMonthTabs');tc.innerHTML=`<div class="month-tab ${mesEsp==='todos'?'active':''}" onclick="filtrarEspMes('todos')">📋 Todos</div>`;
+    const mc=new Set();registrosEsp.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)mc.add(`${parseInt(p[0])}-${parseInt(p[1])-1}`);}});
+    Array.from(mc).sort().forEach(k=>{const[a,me]=k.split('-').map(Number);const nm=MESES[me];const c=registrosEsp.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===me&&parseInt(p[0])===a;}).length;tc.innerHTML+=`<div class="month-tab ${mesEsp===nm?'active':''}" onclick="filtrarEspMes('${nm}')">${nm} (${c})</div>`;});
+    atualizarDashboardEspeciais();atualizarStatusEstoque();aplicarFiltrosEsp();}
+function abrirEntradaEstoque(){document.getElementById('modalEntradaEstoque').classList.add('active');}
+function exportarCSVEsp(){if(registrosEsp.length===0)return mostrarStatus('⚠️ Nenhum registro!','alerta');let csv='Data,Paciente,Medicamento,Ampolas,Prescritor,Ampolas por Ciclo,Ciclos EV\n';registrosEsp.forEach(r=>{csv+=`${fData(r.data)},"${r.paciente}","${r.medicamento}",${r.ampolas},"${r.prescritor}",${r.ampolasCiclo||0},${r.ciclosEV||0}\n`;});const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=`especiais_v${VERSAO}_${new Date().toISOString().split('T')[0]}.csv`;l.click();mostrarStatus('📥 CSV exportado!','sucesso');}
+
+// ==================== CONFIGURAÇÕES ====================
+function abrirConfig(){
+    document.getElementById('cfgMedsCtrl').value=medicamentosAtivosCtrl.join('\n');
+    document.getElementById('cfgResps').value=responsaveisAtivos.join('\n');
+    document.getElementById('cfgMedsEsp').value=MEDICAMENTOS_ESP.join('\n');
+    document.getElementById('cfgEstoqueCritico').value=cfgEstoqueCritico;
+    document.getElementById('cfgEstoqueBaixo').value=cfgEstoqueBaixo;
+    document.getElementById('configVersao').textContent=VERSAO;document.getElementById('configVersaoSobre').textContent=VERSAO;
+    document.getElementById('modalConfig').classList.add('active');trocarConfigTab('medicamentos');
+}
+function trocarConfigTab(tab){
+    document.querySelectorAll('.config-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.config-panel').forEach(p=>p.classList.remove('active'));
+    const tabs=['medicamentos','limites','backup','sobre'];const idx=tabs.indexOf(tab);
+    if(idx>=0){document.querySelectorAll('.config-tab')[idx].classList.add('active');document.getElementById(`configPanel-${tab}`).classList.add('active');}
+}
+function salvarConfigMedicamentos(){
+    const mctrl=document.getElementById('cfgMedsCtrl').value.split('\n').map(m=>m.trim()).filter(m=>m.length>0);
+    const resps=document.getElementById('cfgResps').value.split('\n').map(r=>r.trim()).filter(r=>r.length>0);
+    const mesp=document.getElementById('cfgMedsEsp').value.split('\n').map(m=>m.trim()).filter(m=>m.length>0);
+    if(mctrl.length===0)return mostrarStatus('⚠️ Adicione pelo menos um medicamento!','alerta');
+    medicamentosAtivosCtrl=mctrl.sort();responsaveisAtivos=resps.sort();
+    MEDICAMENTOS_ESP.length=0;mesp.forEach(m=>MEDICAMENTOS_ESP.push(m));
+    localStorage.setItem('meds_344',JSON.stringify(medicamentosAtivosCtrl));
+    localStorage.setItem('resps_344',JSON.stringify(responsaveisAtivos));
+    localStorage.setItem('meds_esp_list',JSON.stringify(MEDICAMENTOS_ESP));
+    carregarSelectsCtrl();carregarSelectsEsp();fecharModal('modalConfig');mostrarStatus('✅ Listas atualizadas!','sucesso');
+}
+function salvarConfigLimites(){
+    cfgEstoqueCritico=parseInt(document.getElementById('cfgEstoqueCritico').value)||5;
+    cfgEstoqueBaixo=parseInt(document.getElementById('cfgEstoqueBaixo').value)||15;
+    localStorage.setItem('cfg_estoque_critico',cfgEstoqueCritico);localStorage.setItem('cfg_estoque_baixo',cfgEstoqueBaixo);
+    atualizarStatusEstoque();fecharModal('modalConfig');mostrarStatus('✅ Limites atualizados!','sucesso');
+}
+function exportarConfig(){
+    const config={versao:VERSAO,data:new Date().toISOString(),medicamentosCtrl:medicamentosAtivosCtrl,responsaveis:responsaveisAtivos,medicamentosEsp:MEDICAMENTOS_ESP,limites:{estoqueCritico:cfgEstoqueCritico,estoqueBaixo:cfgEstoqueBaixo}};
+    const blob=new Blob([JSON.stringify(config,null,2)],{type:'application/json'});const l=document.createElement('a');
+    l.href=URL.createObjectURL(blob);l.download=`config_farmacia_${new Date().toISOString().split('T')[0]}.json`;l.click();
+    mostrarStatus('📥 Configurações exportadas!','sucesso');
+}
+function importarConfig(event){
+    const file=event.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            const config=JSON.parse(e.target.result);
+            if(config.medicamentosCtrl){medicamentosAtivosCtrl=config.medicamentosCtrl;localStorage.setItem('meds_344',JSON.stringify(medicamentosAtivosCtrl));}
+            if(config.responsaveis){responsaveisAtivos=config.responsaveis;localStorage.setItem('resps_344',JSON.stringify(responsaveisAtivos));}
+            if(config.medicamentosEsp){MEDICAMENTOS_ESP.length=0;config.medicamentosEsp.forEach(m=>MEDICAMENTOS_ESP.push(m));localStorage.setItem('meds_esp_list',JSON.stringify(MEDICAMENTOS_ESP));}
+            if(config.limites){cfgEstoqueCritico=config.limites.estoqueCritico||5;cfgEstoqueBaixo=config.limites.estoqueBaixo||15;localStorage.setItem('cfg_estoque_critico',cfgEstoqueCritico);localStorage.setItem('cfg_estoque_baixo',cfgEstoqueBaixo);}
+            carregarSelectsCtrl();carregarSelectsEsp();atualizarStatusEstoque();fecharModal('modalConfig');mostrarStatus('✅ Configurações importadas!','sucesso');
+        }catch(err){mostrarStatus('❌ Arquivo inválido!','erro');}
+    };reader.readAsText(file);
+}
+function resetarDadosLocais(){
+    if(confirm('⚠️ Apagar todos os dados locais?\n\nOs dados na planilha NÃO serão afetados.')){if(confirm('⚠️ Última chance! Confirma?')){localStorage.clear();location.reload();}}
+}
+function fecharModal(id){document.getElementById(id).classList.remove('active');}
+
+inicializar();
+</script>
+</body>
+</html>
