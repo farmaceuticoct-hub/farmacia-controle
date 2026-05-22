@@ -339,6 +339,8 @@ async function getToken(){
     const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sj}`});
     token=(await r.json()).access_token;return token;
 }
+const API_URL = 'https://farmacia-api-controlados.up.railway.app';
+
 async function lerPlanilha(id,range){
     try {
     const response = await fetch(`${API_URL}/api/ler-planilha`, {
