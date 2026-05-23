@@ -1,0 +1,48 @@
+/*
+ * Arquivo: styles.css
+ * Descrição: Todas as regras de estilo do sistema Assistência Farmacêutica
+ *
+ * COMO EDITAR? 
+ * Altere as cores, tamanhos de fonte, espaçamentos, bordas etc. conforme preferir.
+ * Exemplo: para mudar a cor de fundo, altere o valor de background.
+ *
+ * DICA: Use https://htmlcolorcodes.com/ para escolher outras cores.
+ */
+
+:root {
+    --azul-escuro: #1a3a5c;
+    --azul-medio: #1e5090;
+    --azul-claro: #5b9bd5;
+    --azul-bebe: #b8d4f0;
+    --verde-agua: #4db8b0;
+    --verde-vibrante: #38a169;
+    --verde-suave: #48bb78;
+    --verde-claro: #c6f6d5;
+    --amarelo-alerta: #ecc94b;
+    --amarelo-claro: #fefcbf;
+    --roxo: #6b46c1;
+    --roxo-claro: #e9d8fd;
+    --branco: #ffffff;
+    --cinza-claro: #f7fafc;
+    --cinza-medio: #e2e8f0;
+    --texto: #2d3748;
+    --texto-claro: #718096;
+    --danger: #e53e3e;
+    --danger-claro: #fed7d7;
+    --warning: #ed8936;
+    --warning-claro: #feebc8;
+}
+
+/* Restante do CSS completo colado aqui: */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body { 
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+    background: linear-gradient(160deg, #1a3a5c 0%, #1e5090 50%, #1a3a5c 100%);
+    background-attachment: fixed;
+    min-height: 100vh; 
+    padding: 20px;
+}
+
+/* ...restante igual ao style do seu arquivo original... */
