@@ -24,6 +24,104 @@
         <button class="btn-navegacao btn-base" onclick="irParaBase()" title="Ir para o final">⬇</button>
     </div>
     <div class="container">
+              <div class="header">
+            <div class="header-logo">
+                <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="48" r="38" fill="white"/><circle cx="50" cy="48" r="38" fill="none" stroke="#4db8b0" stroke-width="3"/><circle cx="50" cy="48" r="36" fill="none" stroke="#1a3a5c" stroke-width="1.5"/>
+                    <rect x="27" y="28" width="16" height="9" rx="4.5" fill="white" stroke="#5b9bd5" stroke-width="1.5"/><rect x="43" y="28" width="16" height="9" rx="4.5" fill="#5b9bd5"/>
+                    <polyline points="33,32.5 37,36.5 43,30.5" fill="none" stroke="#38a169" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <text x="50" y="60" text-anchor="middle" font-family="Georgia, serif" font-size="7" fill="#1a3a5c" font-weight="bold">Assistência</text>
+                    <text x="50" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#5b9bd5" stroke="#1a3a5c" stroke-width="0.8" font-weight="bold">Farmacêutica</text>
+                    <text x="50" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="5" fill="#1a3a5c">Campo do Tenente - PR</text>
+                </svg>
+                <div class="header-info"><h1>Assistência Farmacêutica</h1><p class="subtitle">Campo do Tenente - PR</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="btn btn-sm btn-outline" onclick="abrirConfig()" style="color:white;border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);font-size:1.1em;" title="Painel de Configurações">⚙️</button>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);padding:8px 16px;border-radius:50px;font-size:0.85em;color:white;">
+                    <div id="statusDot" style="width:10px;height:10px;border-radius:50%;background:#ffa500;"></div><span id="statusText">Pronto</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="trocarModulo('controlados')">💊 Controlados <span class="nav-tab-badge">344/98</span></div>
+            <div class="nav-tab" onclick="trocarModulo('especiais')">💉 Especiais <span class="nav-tab-badge">Estoque</span></div>
+        </div>
+        
+        <div class="content">
+            <div class="modulo active" id="modulo-controlados">
+                <div class="dashboard-header"><h2>📊 Dashboard - Controlados</h2><div class="mes-selector"><label>📅 Mês:</label><select id="dashboardMesControlados" onchange="atualizarDashboardControlados()"><option value="atual">Mês Atual</option></select></div></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="ctrlTotal">0</div><small id="ctrlMesLabel">Mês atual</small></div>
+                    <div class="stat-card"><h3>⚠️ Repetentes</h3><div class="number" id="ctrlRepetentes">0</div><small>mesmo medicamento</small></div>
+                    <div class="stat-card"><h3>👥 Pacientes</h3><div class="number" id="ctrlPacientes">0</div><small>no mês</small></div>
+                    <div class="stat-card"><h3>💊 Medicamentos</h3><div class="number" id="ctrlMeds">0</div><small>diferentes</small></div>
+                </div>
+                <div class="form-section">
+                    <h2>📝 Nova Dispensação - Controlado</h2>
+                    <div class="info-box">🔴 <strong>Repetente:</strong> Mesmo paciente + mesmo medicamento no <strong>mesmo mês</strong>.<br>🟡 <strong>Mês Anterior:</strong> Mesmo paciente + mesmo medicamento no <strong>mês passado</strong>.</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="ctrlData" required onchange="verificarRepetenteCtrl()"></div>
+                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="ctrlPaciente" placeholder="Nome completo" required oninput="verificarRepetenteCtrl()"></div>
+                        <div class="form-group"><label>💊 Medicamento *</label><select id="ctrlMedicamento" required onchange="verificarRepetenteCtrl()"><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="ctrlQuantidade" min="1" placeholder="Ex: 30" required></div>
+                        <div class="form-group"><label>👨‍⚕️ Responsável *</label><select id="ctrlResponsavel" required><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>🔁 Status</label><input type="text" id="ctrlRepetente" readonly value="Preencha os campos"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="registrarControlado()">💊 Registrar</button>
+                        <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
+                        <button class="btn btn-warning" onclick="exportarCSVCtrl()">📥 Exportar</button>
+                    </div>
+                    <div class="sync-info" id="syncInfoCtrl">🔄 Google Sheets API</div>
+                </div>
+                <h3 class="section-title">📂 Histórico</h3>
+                <div class="legenda"><span class="legenda-item"><span class="legenda-dot ld-ok"></span> ✅ Não</span><span class="legenda-item"><span class="legenda-dot ld-mes-anterior"></span> 🟡 Mês Anterior</span><span class="legenda-item"><span class="legenda-dot ld-repetente"></span> 🔴 Sim</span></div>
+                <div class="month-tabs" id="ctrlMonthTabs"><div class="month-tab active" onclick="filtrarCtrlMes('todos')">📋 Todos</div></div>
+                <div class="filter-bar"><select id="ctrlFiltroMed" onchange="aplicarFiltrosCtrl()"><option value="todos">Todos</option></select><input type="text" id="ctrlFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosCtrl()"><span id="ctrlResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Qtd</th><th>Responsável</th><th>Repetente</th></tr></thead><tbody id="ctrlTabela"><tr><td colspan="6" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
+                <h3 class="section-title">📈 Contagem - <span id="ctrlTituloContagem"></span></h3>
+                <div class="table-wrapper"><table><thead><tr><th>Medicamento</th><th>Qtd Total</th><th>Pacientes</th><th>Alertas</th></tr></thead><tbody id="ctrlTabelaContagem"><tr><td colspan="4" style="text-align:center;padding:30px;">Selecione um mês</td></tr></tbody></table></div>
+            </div>
+            
+            <div class="modulo" id="modulo-especiais">
+                <div class="dashboard-header"><h2>📊 Dashboard - Especiais</h2><div class="mes-selector"><label>📅 Mês:</label><select id="dashboardMesEspeciais" onchange="atualizarDashboardEspeciais()"><option value="atual">Mês Atual</option></select></div></div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="espTotal">0</div><small id="espMesLabel">Mês atual</small></div>
+                    <div class="stat-card"><h3>📦 Ferro</h3><div class="number" id="espEstoqueFerro">0</div><small>ampolas</small></div>
+                    <div class="stat-card"><h3>📦 Enoxaparina</h3><div class="number" id="espEstoqueEnoxa">0</div><small>seringas</small></div>
+                    <div class="stat-card"><h3>👥 Pacientes</h3><div class="number" id="espPacientes">0</div><small>no mês</small></div>
+                </div>
+                <h3 class="section-title">📦 Status do Estoque</h3><div id="estoqueStatus"></div>
+                <div class="form-section">
+                    <h2>📝 Nova Dispensação - Especial</h2>
+                    <div class="form-grid">
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="espData" required></div>
+                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="espPaciente" placeholder="Nome completo" required></div>
+                        <div class="form-group"><label>💉 Medicamento *</label><select id="espMedicamento" required onchange="atualizarEstoqueDisponivel()"><option value="">Selecione</option></select></div>
+                        <div class="form-group"><label>📦 Ampolas *</label><input type="number" id="espAmpolas" min="1" placeholder="Ex: 3" required oninput="atualizarEstoqueDisponivel()"></div>
+                        <div class="form-group"><label>👨‍⚕️ Prescritor *</label><input type="text" id="espPrescritor" placeholder="Nome do médico" required></div>
+                        <div class="form-group"><label>🔄 Amp/Ciclo</label><input type="number" id="espAmpolasCiclo" min="1" placeholder="Ex: 10"></div>
+                        <div class="form-group"><label>🔁 Ciclos EV</label><input type="number" id="espCiclosEV" min="1" placeholder="Ex: 3"></div>
+                        <div class="form-group"><label>📋 Estoque</label><input type="text" id="espEstoqueDisponivel" readonly value="Selecione o medicamento"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-roxo" onclick="registrarEspecial()">💉 Registrar</button>
+                        <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
+                        <button class="btn btn-warning" onclick="abrirEntradaEstoque()">📥 Entrada</button>
+                        <button class="btn btn-info" onclick="exportarCSVEsp()">📤 Exportar</button>
+                    </div>
+                    <div class="sync-info" id="syncInfoEsp">🔄 Google Sheets API</div>
+                </div>
+                <h3 class="section-title">📂 Histórico</h3>
+                <div class="month-tabs" id="espMonthTabs"><div class="month-tab active" onclick="filtrarEspMes('todos')">📋 Todos</div></div>
+                <div class="filter-bar"><select id="espFiltroMed" onchange="aplicarFiltrosEsp()"><option value="todos">Todos</option></select><input type="text" id="espFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosEsp()"><span id="espResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
+                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Amp</th><th>Prescritor</th><th>A/C</th><th>EV</th></tr></thead><tbody id="espTabela"><tr><td colspan="7" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
+            </div>
+        </div>
+        
+        <div class="footer"><span>Assistência Farmacêutica - Campo do Tenente/PR</span><span>|</span><span>Sistema de Controle de Medicamentos</span><span class="footer-version">📦 v2.4</span></div>
         <!-- ... O RESTANTE DO SEU HTML FOI MANTIDO IGUAL ... -->
         <!-- Copie todo o conteúdo entre <body>...</body> do arquivo original, exceto <script>...</script> -->
         <!--
@@ -37,6 +135,16 @@
         <div id="modalEntradaEstoque" class="modal"> ... </div>
         <div id="modalConfig" class="modal"> ... </div>
     </div>
+    
+    <div id="modalEntradaEstoque" class="modal"><div class="modal-content" style="max-width:450px;"><h3 style="margin-bottom:12px;">📥 Entrada de Estoque</h3><div class="form-grid"><div class="form-group"><label>💉 Medicamento</label><select id="entradaMedicamento"><option value="">Selecione</option></select></div><div class="form-group"><label>📦 Quantidade</label><input type="number" id="entradaQuantidade" min="1" placeholder="Ex: 50"></div></div><div class="btn-group" style="margin-top:15px;"><button class="btn btn-success" onclick="registrarEntradaEstoque()">📥 Registrar</button><button class="btn" onclick="fecharModal('modalEntradaEstoque')" style="background:#a0aec0;color:white;">Cancelar</button></div></div></div>
+    
+    <div id="modalConfig" class="modal"><div class="modal-content"><h3 style="margin-bottom:12px;color:var(--azul-escuro);">⚙️ Painel de Configurações</h3><p style="font-size:0.8em;color:var(--texto-claro);margin-bottom:15px;">📦 v<span id="configVersao"></span> | 🔐 Google Sheets API | 💾 Dados locais</p>
+    <div class="config-tabs"><div class="config-tab active" onclick="trocarConfigTab('medicamentos')">💊 Medicamentos</div><div class="config-tab" onclick="trocarConfigTab('limites')">📊 Limites</div><div class="config-tab" onclick="trocarConfigTab('backup')">💾 Backup</div><div class="config-tab" onclick="trocarConfigTab('sobre')">ℹ️ Sobre</div></div>
+    <div class="config-panel active" id="configPanel-medicamentos"><div class="config-section"><h4>💊 Controlados</h4><textarea id="cfgMedsCtrl" rows="10" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>👨‍⚕️ Responsáveis</h4><textarea id="cfgResps" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>💉 Especiais</h4><textarea id="cfgMedsEsp" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><button class="btn btn-primary" onclick="salvarConfigMedicamentos()">💾 Salvar</button></div>
+    <div class="config-panel" id="configPanel-limites"><div class="config-section"><h4>📦 Limites de Estoque</h4><div class="config-row"><div><label>🔴 Crítico (≤)</label><input type="number" id="cfgEstoqueCritico" min="0" value="5"></div><div><label>🟡 Baixo (≤)</label><input type="number" id="cfgEstoqueBaixo" min="0" value="15"></div></div></div><button class="btn btn-primary" onclick="salvarConfigLimites()">💾 Salvar</button></div>
+    <div class="config-panel" id="configPanel-backup"><div class="config-section"><h4>💾 Exportar/Importar</h4><p class="config-info">Exporte configurações para arquivo.</p><div style="display:flex;gap:8px;"><button class="btn btn-info btn-sm" onclick="exportarConfig()">📥 Exportar</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('importConfigFile').click()">📤 Importar</button><input type="file" id="importConfigFile" accept=".json" style="display:none;" onchange="importarConfig(event)"></div></div><div class="config-section"><h4>🔄 Resetar</h4><p class="config-info" style="color:var(--danger);">Apaga dados locais.</p><button class="btn btn-danger btn-sm" onclick="resetarDadosLocais()">🗑️ Limpar</button></div></div>
+    <div class="config-panel" id="configPanel-sobre"><div class="config-section"><h4>ℹ️ Sobre</h4><p style="font-size:0.85em;line-height:1.6;"><strong>Assistência Farmacêutica</strong><br>Campo do Tenente - PR<br><br><strong>Versão:</strong> <span id="configVersaoSobre"></span><br><strong>Módulos:</strong> Controlados + Especiais<br><strong>Conexão:</strong> Google Sheets API<br><br>✅ Registro de dispensações<br>✅ Detecção de repetentes<br>✅ Controle de estoque<br>✅ Dashboard mensal<br>✅ Exportação CSV<br>✅ Painel de configurações<br>✅ Botões de navegação<br>✅ Status flutuante</p></div></div>
+    <div style="margin-top:15px;text-align:right;"><button class="btn" onclick="fecharModal('modalConfig')" style="background:#a0aec0;color:white;">Fechar</button></div></div></div>
     <!-- Carregamento do arquivo JavaScript externo -->
     <script src="scripts.js"></script>
 </body>
