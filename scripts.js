@@ -77,19 +77,6 @@ function trocarModulo(m){
 }
 
 // ==================== GOOGLE API ====================
-async function getToken(){
-    const h={alg:'RS256',typ:'JWT'};const n=Math.floor(Date.now()/1000);
-    const c={iss:CLIENT_EMAIL,scope:'https://www.googleapis.com/auth/spreadsheets',aud:'https://oauth2.googleapis.com/token',exp:n+3600,iat:n};
-    const b64=o=>btoa(JSON.stringify(o)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-    const j=`${b64(h)}.${b64(c)}`;
-    const kd=PRIVATE_KEY.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n/g,'');
-    const bk=Uint8Array.from(atob(kd),c=>c.charCodeAt(0));
-    const ck=await crypto.subtle.importKey('pkcs8',bk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
-    const sg=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',ck,new TextEncoder().encode(j));
-    const sj=`${j}.${btoa(String.fromCharCode(...new Uint8Array(sg))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}`;
-    const r=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${sj}`});
-    token=(await r.json()).access_token;return token;
-}
 const API_URL = 'https://farmacia-api-controlados.up.railway.app';
 
 async function lerPlanilha(id,range){
@@ -143,12 +130,6 @@ async function escreverPlanilha(id, range, values) {
     console.error('Erro ao escrever:', error);
     throw error;
   }
-}
-async function escreverPlanilha(id,range,values){
-    if(!token)await getToken();
-    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({values:[values]})});
-    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||`HTTP ${r.status}`);}
-    return await r.json();
 }
 async function sincronizarTudo(){
     const sd=document.getElementById('statusDot'),st=document.getElementById('statusText');
