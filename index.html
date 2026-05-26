@@ -138,13 +138,99 @@
     
     <div id="modalEntradaEstoque" class="modal"><div class="modal-content" style="max-width:450px;"><h3 style="margin-bottom:12px;">📥 Entrada de Estoque</h3><div class="form-grid"><div class="form-group"><label>💉 Medicamento</label><select id="entradaMedicamento"><option value="">Selecione</option></select></div><div class="form-group"><label>📦 Quantidade</label><input type="number" id="entradaQuantidade" min="1" placeholder="Ex: 50"></div></div><div class="btn-group" style="margin-top:15px;"><button class="btn btn-success" onclick="registrarEntradaEstoque()">📥 Registrar</button><button class="btn" onclick="fecharModal('modalEntradaEstoque')" style="background:#a0aec0;color:white;">Cancelar</button></div></div></div>
     
-    <div id="modalConfig" class="modal"><div class="modal-content"><h3 style="margin-bottom:12px;color:var(--azul-escuro);">⚙️ Painel de Configurações</h3><p style="font-size:0.8em;color:var(--texto-claro);margin-bottom:15px;">📦 v<span id="configVersao"></span> | 🔐 Google Sheets API | 💾 Dados locais</p>
-    <div class="config-tabs"><div class="config-tab active" onclick="trocarConfigTab('medicamentos')">💊 Medicamentos</div><div class="config-tab" onclick="trocarConfigTab('limites')">📊 Limites</div><div class="config-tab" onclick="trocarConfigTab('backup')">💾 Backup</div><div class="config-tab" onclick="trocarConfigTab('sobre')">ℹ️ Sobre</div></div>
-    <div class="config-panel active" id="configPanel-medicamentos"><div class="config-section"><h4>💊 Controlados</h4><textarea id="cfgMedsCtrl" rows="10" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>👨‍⚕️ Responsáveis</h4><textarea id="cfgResps" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><div class="config-section"><h4>💉 Especiais</h4><textarea id="cfgMedsEsp" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div><button class="btn btn-primary" onclick="salvarConfigMedicamentos()">💾 Salvar</button></div>
-    <div class="config-panel" id="configPanel-limites"><div class="config-section"><h4>📦 Limites de Estoque</h4><div class="config-row"><div><label>🔴 Crítico (≤)</label><input type="number" id="cfgEstoqueCritico" min="0" value="5"></div><div><label>🟡 Baixo (≤)</label><input type="number" id="cfgEstoqueBaixo" min="0" value="15"></div></div></div><button class="btn btn-primary" onclick="salvarConfigLimites()">💾 Salvar</button></div>
-    <div class="config-panel" id="configPanel-backup"><div class="config-section"><h4>💾 Exportar/Importar</h4><p class="config-info">Exporte configurações para arquivo.</p><div style="display:flex;gap:8px;"><button class="btn btn-info btn-sm" onclick="exportarConfig()">📥 Exportar</button><button class="btn btn-outline btn-sm" onclick="document.getElementById('importConfigFile').click()">📤 Importar</button><input type="file" id="importConfigFile" accept=".json" style="display:none;" onchange="importarConfig(event)"></div></div><div class="config-section"><h4>🔄 Resetar</h4><p class="config-info" style="color:var(--danger);">Apaga dados locais.</p><button class="btn btn-danger btn-sm" onclick="resetarDadosLocais()">🗑️ Limpar</button></div></div>
-    <div class="config-panel" id="configPanel-sobre"><div class="config-section"><h4>ℹ️ Sobre</h4><p style="font-size:0.85em;line-height:1.6;"><strong>Assistência Farmacêutica</strong><br>Campo do Tenente - PR<br><br><strong>Versão:</strong> <span id="configVersaoSobre"></span><br><strong>Módulos:</strong> Controlados + Especiais<br><strong>Conexão:</strong> Google Sheets API<br><br>✅ Registro de dispensações<br>✅ Detecção de repetentes<br>✅ Controle de estoque<br>✅ Dashboard mensal<br>✅ Exportação CSV<br>✅ Painel de configurações<br>✅ Botões de navegação<br>✅ Status flutuante</p></div></div>
-    <div style="margin-top:15px;text-align:right;"><button class="btn" onclick="fecharModal('modalConfig')" style="background:#a0aec0;color:white;">Fechar</button></div></div></div>
+    <!-- PAINEL DE CONFIGURAÇÕES (COMPLETO) -->
+<div id="modalConfig" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-bottom:12px;color:var(--azul-escuro);">⚙️ Painel de Configurações</h3>
+        <p style="font-size:0.8em;color:var(--texto-claro);margin-bottom:15px;">
+            📦 v<span id="configVersao"></span> | 🔐 Google Sheets API | 💾 Dados locais
+        </p>
+        
+        <div class="config-tabs">
+            <div class="config-tab active" onclick="trocarConfigTab('medicamentos')">💊 Medicamentos</div>
+            <div class="config-tab" onclick="trocarConfigTab('limites')">📊 Limites</div>
+            <div class="config-tab" onclick="trocarConfigTab('backup')">💾 Backup</div>
+            <div class="config-tab" onclick="trocarConfigTab('sobre')">ℹ️ Sobre</div>
+        </div>
+        
+        <!-- Painel Medicamentos -->
+        <div class="config-panel active" id="configPanel-medicamentos">
+            <div class="config-section">
+                <h4>💊 Controlados</h4>
+                <textarea id="cfgMedsCtrl" rows="10" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <div class="config-section">
+                <h4>👨‍⚕️ Responsáveis</h4>
+                <textarea id="cfgResps" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <div class="config-section">
+                <h4>💉 Especiais</h4>
+                <textarea id="cfgMedsEsp" rows="3" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="salvarConfigMedicamentos()">💾 Salvar</button>
+        </div>
+        
+        <!-- Painel Limites -->
+        <div class="config-panel" id="configPanel-limites">
+            <div class="config-section">
+                <h4>📦 Limites de Estoque</h4>
+                <div class="config-row">
+                    <div>
+                        <label>🔴 Crítico (≤)</label>
+                        <input type="number" id="cfgEstoqueCritico" min="0" value="5">
+                    </div>
+                    <div>
+                        <label>🟡 Baixo (≤)</label>
+                        <input type="number" id="cfgEstoqueBaixo" min="0" value="15">
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="salvarConfigLimites()">💾 Salvar</button>
+        </div>
+        
+        <!-- Painel Backup -->
+        <div class="config-panel" id="configPanel-backup">
+            <div class="config-section">
+                <h4>💾 Exportar/Importar</h4>
+                <p class="config-info">Exporte configurações para arquivo.</p>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-info btn-sm" onclick="exportarConfig()">📥 Exportar</button>
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importConfigFile').click()">📤 Importar</button>
+                    <input type="file" id="importConfigFile" accept=".json" style="display:none;" onchange="importarConfig(event)">
+                </div>
+            </div>
+            <div class="config-section">
+                <h4>🔄 Resetar</h4>
+                <p class="config-info" style="color:var(--danger);">Apaga dados locais.</p>
+                <button class="btn btn-danger btn-sm" onclick="resetarDadosLocais()">🗑️ Limpar</button>
+            </div>
+        </div>
+        
+        <!-- Painel Sobre -->
+        <div class="config-panel" id="configPanel-sobre">
+            <div class="config-section">
+                <h4>ℹ️ Sobre</h4>
+                <p style="font-size:0.85em;line-height:1.6;">
+                    <strong>Assistência Farmacêutica</strong><br>
+                    Campo do Tenente - PR<br><br>
+                    <strong>Versão:</strong> <span id="configVersaoSobre"></span><br>
+                    <strong>Módulos:</strong> Controlados + Especiais<br>
+                    <strong>Conexão:</strong> Google Sheets API<br><br>
+                    ✅ Registro de dispensações<br>
+                    ✅ Detecção de repetentes<br>
+                    ✅ Controle de estoque<br>
+                    ✅ Dashboard mensal<br>
+                    ✅ Exportação CSV<br>
+                    ✅ Painel de configurações
+                </p>
+            </div>
+        </div>
+        
+        <div style="margin-top:15px;text-align:right;">
+            <button class="btn" onclick="fecharModal('modalConfig')" style="background:#a0aec0;color:white;">Fechar</button>
+        </div>
+    </div>
+</div>
     <!-- Carregamento do arquivo JavaScript externo -->
     <script src="scripts.js"></script>
 </body>
