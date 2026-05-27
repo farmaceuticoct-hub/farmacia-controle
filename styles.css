@@ -170,3 +170,10 @@ body {
             .btn-group { flex-direction: column; }
             .btn { width: 100%; justify-content: center; }
         }
+.logo-img {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%; /* Se quiser circular */
+    object-fit: contain; /* Para manter proporção */
+    flex-shrink: 0;
+}
