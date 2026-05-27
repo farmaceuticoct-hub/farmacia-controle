@@ -1,21 +1,16 @@
 /*
- * Arquivo: scripts.js
- * Descrição: Todas as funcionalidades e lógicas do sistema Assistência Farmacêutica
+ * Arquivo: scripts.js - v2.5
+ * Sistema: Assistência Farmacêutica
+ * Descrição: Todas as funcionalidades e lógicas do sistema
  *
- * COMO EDITAR?
- * - Altere nomes, opções de listas, mensagens e textos nos blocos para mudar o funcionamento.
- * - Para quem NÃO é programador: mude só o necessário; se precisar de uma função nova, peça ajuda de alguém ou descreva bem!
- *
- * DICAS:
- * - Para alterar nomes de medicamentos, procure por MEDICAMENTOS_CTRL e MEDICAMENTOS_ESP.
- * - Para mudar responsáveis, veja a lista RESPONSAVEIS.
- * - Funções de cadastro, sincronização e exportação estão identificadas por comentários.
- *
- * Se o sistema falhar devido a alterações, volte o arquivo ao original do GitHub.
+ * COMO EDITAR:
+ * - Para alterar medicamentos: edite MEDICAMENTOS_CTRL e MEDICAMENTOS_ESP
+ * - Para mudar responsáveis: edite RESPONSAVEIS
+ * - Para alterar mensagens: procure por mostrarStatus()
  */
 
-// ============ CONFIGURAÇÃO (NÃO APAGAR ESSAS VARIÁVEIS!) ===========
-// Aqui vão as listas principais do sistema:
+// ============ CONFIGURAÇÃO ============
+const API_URL = 'https://farmacia-api-controlados.up.railway.app';
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const VERSAO = '2.5';
@@ -31,21 +26,18 @@ const MEDICAMENTOS_ESP = [
   "Sacarato de Óxido Férrico 20mg/mL injetável",
   "Enoxaparina 40mg/0,4mL"
 ];
-const RESPONSAVEIS = [
-  "Cinthia M.", "Daniel C.", "Luana Q.", "Marcos J."
-];
+const RESPONSAVEIS = ["Cinthia M.", "Daniel C.", "Luana Q.", "Marcos J."];
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-// ============ VARIÁVEIS DE TRABALHO (não precisa mexer) ===========
+// ============ VARIÁVEIS DE TRABALHO ============
 let registrosCtrl=[], registrosEsp=[], estoque={};
 let medicamentosAtivosCtrl=[...MEDICAMENTOS_CTRL], responsaveisAtivos=[...RESPONSAVEIS];
-let mesCtrl='todos', mesEsp='todos', dashboardMesCtrl=null, dashboardMesEsp=null, token=null;
+let mesCtrl='todos', mesEsp='todos', dashboardMesCtrl=null, dashboardMesEsp=null;
 let cfgEstoqueCritico=parseInt(localStorage.getItem('cfg_estoque_critico')||'5');
 let cfgEstoqueBaixo=parseInt(localStorage.getItem('cfg_estoque_baixo')||'15');
 
-// ============ INICIALIZAÇÃO DO SISTEMA ===========
+// ============ INICIALIZAÇÃO ============
 function inicializar(){
-    // DICA: Se aparecer erro "null is not iterable", veja se há problemas de digitação em listas!
     medicamentosAtivosCtrl=JSON.parse(localStorage.getItem('meds_344')||'null')||[...MEDICAMENTOS_CTRL];
     responsaveisAtivos=JSON.parse(localStorage.getItem('resps_344')||'null')||[...RESPONSAVEIS];
     registrosCtrl=JSON.parse(localStorage.getItem('registros_344')||'[]');
@@ -58,16 +50,8 @@ function inicializar(){
     document.getElementById('espData').valueAsDate=new Date();
     document.getElementById('ctrlTituloContagem').textContent=MESES[new Date().getMonth()];
     atualizarModuloControlados();atualizarModuloEspeciais();sincronizarTudo();
-    console.log('🚀 v2.4 - GitHub Ready');
+    console.log(`🚀 Assistência Farmacêutica v${VERSAO} - Railway Ready`);
 }
-
-// ============ RESTANTE DO JS ===========
-// TODO O RESTANTE DO JS DEVE SER COPIADO EXATAMENTE COMO ESTÁ NO SEU ARQUIVO ORIGINAL
-// (Incluindo funções de cadastro, controle, navegação, Google API, configurações, etc.)
-//
-// Recomendação: Deixe sempre os comentários dos blocos grandes para não se perder.
-
-// ... cole aqui todas as funções JS do <script> do index.html ...
 
 function trocarModulo(m){
     document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
@@ -76,61 +60,39 @@ function trocarModulo(m){
     else{document.querySelector('.nav-tab:nth-child(2)').classList.add('active');document.getElementById('modulo-especiais').classList.add('active');}
 }
 
-// ==================== GOOGLE API ====================
-const API_URL = 'https://farmacia-api-controlados.up.railway.app';
-
-async function lerPlanilha(id,range){
+// ============ API (VIA SERVIDOR RAILWAY) ============
+async function lerPlanilha(id, range) {
     try {
-    const response = await fetch(`${API_URL}/api/ler-planilha`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        planilhaId: id,
-        range: range
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erro ${response.status}`);
+        const response = await fetch(`${API_URL}/api/ler-planilha`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planilhaId: id, range: range })
+        });
+        if (!response.ok) throw new Error(`Erro ${response.status}`);
+        const data = await response.json();
+        return data.valores || [];
+    } catch (error) {
+        console.error('Erro ao ler:', error);
+        mostrarStatus('⚠️ Erro ao sincronizar. Verifique sua conexão.', 'erro');
+        return [];
     }
-
-    const data = await response.json();
-    return data.valores || [];
-
-  } catch (error) {
-    console.error('Erro ao ler:', error);
-    mostrarStatus('⚠️ Erro ao sincronizar. Verifique sua conexão.', 'erro');
-    return [];
-  }
 }
 
 async function escreverPlanilha(id, range, values) {
-  try {
-    const response = await fetch(`${API_URL}/api/escrever-planilha`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        planilhaId: id,
-        range: range,
-        valores: values
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erro ${response.status}`);
+    try {
+        const response = await fetch(`${API_URL}/api/escrever-planilha`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planilhaId: id, range: range, valores: values })
+        });
+        if (!response.ok) throw new Error(`Erro ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Erro ao escrever:', error);
+        throw error;
     }
-
-    return await response.json();
-
-  } catch (error) {
-    console.error('Erro ao escrever:', error);
-    throw error;
-  }
 }
+
 async function sincronizarTudo(){
     const sd=document.getElementById('statusDot'),st=document.getElementById('statusText');
     sd.style.background='#ffa500';st.textContent='Sincronizando...';
@@ -145,10 +107,11 @@ async function sincronizarTudo(){
     }catch(e){console.error(e);sd.style.background='#f56565';st.textContent='⚠️ Erro';}
     carregarDashboardCtrl();carregarDashboardEsp();atualizarModuloControlados();atualizarModuloEspeciais();
 }
+
 function nData(s){if(!s)return'';s=String(s).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(s.includes('/')){const p=s.split('/');if(p.length===3)return`${p[2].padStart(4,'20')}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;}try{const d=new Date(s);if(!isNaN(d.getTime()))return d.toISOString().split('T')[0];}catch(e){}return s;}
 function fData(s){if(!s)return'';try{const p=s.split('-');if(p.length===3)return`${p[2]}/${p[1]}/${p[0]}`;}catch(e){}return s;}
 
-// ==================== STATUS + NAVEGAÇÃO ====================
+// ============ STATUS + NAVEGAÇÃO ============
 function mostrarStatus(m,tipo){
     const s=document.getElementById('statusFlutuante');
     s.textContent=m;s.className=`status-registro status-${tipo}`;s.style.display='block';
@@ -162,7 +125,7 @@ window.addEventListener('scroll',function(){
     if(s>300){b.forEach(btn=>btn.classList.add('visivel'));}else{b.forEach(btn=>btn.classList.remove('visivel'));}
 });
 
-// ==================== CONTROLADOS ====================
+// ============ CONTROLADOS ============
 function carregarSelectsCtrl(){
     document.getElementById('ctrlMedicamento').innerHTML='<option value="">Selecione</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
     document.getElementById('ctrlFiltroMed').innerHTML='<option value="todos">Todos</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
@@ -238,7 +201,7 @@ function atualizarModuloControlados(){carregarDashboardCtrl();carregarSelectsCtr
     atualizarDashboardControlados();aplicarFiltrosCtrl();atualizarContagemCtrl();}
 function exportarCSVCtrl(){if(registrosCtrl.length===0)return mostrarStatus('⚠️ Nenhum registro!','alerta');let csv='Data,Paciente,Medicamento,Quantidade,Responsável,Repetente\n';registrosCtrl.forEach(r=>{csv+=`${fData(r.data)},"${r.paciente}","${r.medicamento}",${r.quantidade},"${r.responsavel}","${r.repetente}"\n`;});const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=`controlados_v${VERSAO}_${new Date().toISOString().split('T')[0]}.csv`;l.click();mostrarStatus('📥 CSV exportado!','sucesso');}
 
-// ==================== ESPECIAIS ====================
+// ============ ESPECIAIS ============
 function carregarSelectsEsp(){
     const sm=document.getElementById('espMedicamento'),sf=document.getElementById('espFiltroMed'),se=document.getElementById('entradaMedicamento');
     const opts=MEDICAMENTOS_ESP.map(m=>`<option value="${m}">${m}</option>`).join('');
@@ -316,7 +279,7 @@ function atualizarModuloEspeciais(){carregarDashboardEsp();carregarSelectsEsp();
 function abrirEntradaEstoque(){document.getElementById('modalEntradaEstoque').classList.add('active');}
 function exportarCSVEsp(){if(registrosEsp.length===0)return mostrarStatus('⚠️ Nenhum registro!','alerta');let csv='Data,Paciente,Medicamento,Ampolas,Prescritor,Ampolas por Ciclo,Ciclos EV\n';registrosEsp.forEach(r=>{csv+=`${fData(r.data)},"${r.paciente}","${r.medicamento}",${r.ampolas},"${r.prescritor}",${r.ampolasCiclo||0},${r.ciclosEV||0}\n`;});const b=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const l=document.createElement('a');l.href=URL.createObjectURL(b);l.download=`especiais_v${VERSAO}_${new Date().toISOString().split('T')[0]}.csv`;l.click();mostrarStatus('📥 CSV exportado!','sucesso');}
 
-// ==================== CONFIGURAÇÕES ====================
+// ============ CONFIGURAÇÕES ============
 function abrirConfig(){
     document.getElementById('cfgMedsCtrl').value=medicamentosAtivosCtrl.join('\n');
     document.getElementById('cfgResps').value=responsaveisAtivos.join('\n');
@@ -374,5 +337,6 @@ function resetarDadosLocais(){
     if(confirm('⚠️ Apagar todos os dados locais?\n\nOs dados na planilha NÃO serão afetados.')){if(confirm('⚠️ Última chance! Confirma?')){localStorage.clear();location.reload();}}
 }
 function fecharModal(id){document.getElementById(id).classList.remove('active');}
-// Por fim, sempre inicialize o sistema assim:
+
+// Inicializar o sistema
 inicializar();
