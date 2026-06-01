@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes - Assistência Farmacêutica</title>
+    <link rel="stylesheet" href="diabetes-styles.css">
+</head>
+<body>
+    <div class="status-registro" id="statusFlutuante"></div>
+    
+    <div class="botoes-navegacao">
+        <button class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Voltar ao topo">⬆</button>
+        <button class="btn-navegacao btn-base" onclick="irParaBase()" title="Ir para o final">⬇</button>
+    </div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-logo">
+                <img src="logo.png" alt="Logo" class="logo-img">
+                <div class="header-info">
+                    <h1>Assistência Farmacêutica</h1>
+                    <p class="subtitle">Controle de Diabetes - Campo do Tenente/PR</p>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);padding:8px 16px;border-radius:50px;font-size:0.85em;color:white;">
+                <div id="statusDot" style="width:10px;height:10px;border-radius:50%;background:#ffa500;"></div>
+                <span id="statusText">Pronto</span>
+            </div>
+        </div>
+        
+        <!-- NAVEGAÇÃO -->
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="trocarModulo('pacientes')">👥 Pacientes</div>
+            <div class="nav-tab" onclick="trocarModulo('canetas')">💉 Canetas</div>
+            <div class="nav-tab" onclick="trocarModulo('refis')">🔄 Refis</div>
+            <div class="nav-tab" onclick="trocarModulo('insumos')">📦 Insumos</div>
+            <div class="nav-tab" onclick="window.open('index.html','_self')" title="Voltar para Controlados">💊 Controlados</div>
+        </div>
+        
+        <div class="content">
+            <!-- MÓDULO PACIENTES -->
+            <div class="modulo active" id="modulo-pacientes">
+                <div class="dashboard-header">
+                    <h2>👥 Cadastro de Pacientes</h2>
+                    <button class="btn btn-primary" onclick="abrirCadastroPaciente()">➕ Novo Paciente</button>
+                </div>
+                <div class="filter-bar">
+                    <input type="text" id="filtroPacienteNome" placeholder="🔍 Buscar por nome..." onkeyup="aplicarFiltrosPacientes()">
+                    <select id="filtroPacienteUBS" onchange="aplicarFiltrosPacientes()">
+                        <option value="todas">Todas UBS</option>
+                    </select>
+                    <span id="pacientesCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Nome</th><th>Nascimento</th><th>Idade</th><th>ACS</th><th>Telefone</th><th>UBS</th><th>Ações</th></tr></thead>
+                        <tbody id="tabelaPacientes"><tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum paciente cadastrado</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- MÓDULO CANETAS -->
+            <div class="modulo" id="modulo-canetas">
+                <div class="dashboard-header"><h2>💉 Dispensação de Canetas</h2></div>
+                <div class="form-section">
+                    <h2>📝 Registrar Caneta</h2>
+                    <div class="info-box">💉 Cada paciente pode receber uma nova caneta em caso de quebra ou perda. O lote da caneta é registrado.</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>👤 Paciente *</label><select id="canetaPaciente" required><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="canetaData" required></div>
+                        <div class="form-group"><label>🔢 Lote da Caneta *</label><input type="text" id="canetaLote" placeholder="Ex: LOTE-2024-001" required></div>
+                        <div class="form-group"><label>📝 Observação</label><input type="text" id="canetaObs" placeholder="Ex: Substituição por quebra"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="registrarCaneta()">💉 Registrar Caneta</button>
+                    </div>
+                </div>
+                <h3 class="section-title">📂 Histórico de Canetas</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Lote</th><th>Observação</th></tr></thead>
+                        <tbody id="tabelaCanetas"><tr><td colspan="4" style="text-align:center;padding:30px;">Nenhuma caneta registrada</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- MÓDULO REFIS -->
+            <div class="modulo" id="modulo-refis">
+                <div class="dashboard-header"><h2>🔄 Dispensação de Refis</h2></div>
+                <div class="form-section">
+                    <h2>📝 Registrar Refil</h2>
+                    <div class="info-box">🔄 O limite mensal é definido pela receita médica. O sistema avisa quando o paciente já retirou o máximo permitido.</div>
+                    <div class="form-grid">
+                        <div class="form-group"><label>👤 Paciente *</label><select id="refilPaciente" required onchange="atualizarLimiteRefil()"><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="refilData" required></div>
+                        <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="refilQuantidade" min="1" placeholder="Ex: 3" required></div>
+                        <div class="form-group"><label>📊 Limite Mensal</label><input type="text" id="refilLimite" readonly value="Selecione o paciente"></div>
+                        <div class="form-group"><label>📋 Já retirado este mês</label><input type="text" id="refilRetirado" readonly value="0"></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="registrarRefil()">🔄 Registrar Refil</button>
+                        <button class="btn btn-info" onclick="abrirLimiteRefil()">⚙️ Definir Limite</button>
+                    </div>
+                </div>
+                <h3 class="section-title">📂 Histórico de Refis</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Quantidade</th><th>Limite Mensal</th></tr></thead>
+                        <tbody id="tabelaRefis"><tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum refil registrado</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- MÓDULO INSUMOS -->
+            <div class="modulo" id="modulo-insumos">
+                <div class="dashboard-header"><h2>📦 Dispensação de Insumos</h2></div>
+                <div class="form-section">
+                    <h2>📝 Registrar Insumo</h2>
+                    <div class="form-grid">
+                        <div class="form-group"><label>👤 Paciente *</label><select id="insumoPaciente" required><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>📅 Data *</label><input type="date" id="insumoData" required></div>
+                        <div class="form-group"><label>📦 Tipo *</label><select id="insumoTipo" required>
+                            <option value="">Selecione</option>
+                            <option value="Tiras para teste">Tiras para teste</option>
+                            <option value="Glicosímetro">Glicosímetro</option>
+                            <option value="Lancetas">Lancetas</option>
+                            <option value="Agulhas para caneta">Agulhas para caneta</option>
+                        </select></div>
+                        <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="insumoQuantidade" min="1" placeholder="Ex: 50" required></div>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="registrarInsumo()">📦 Registrar Insumo</button>
+                    </div>
+                </div>
+                <h3 class="section-title">📂 Histórico de Insumos</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Quantidade</th></tr></thead>
+                        <tbody id="tabelaInsumos"><tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum insumo registrado</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <span>Assistência Farmacêutica - Campo do Tenente/PR</span><span>|</span>
+            <span>Controle de Diabetes</span><span class="footer-version">📦 v1.0</span>
+        </div>
+    </div>
+    
+    <!-- MODAIS -->
+    <div id="modalCadastroPaciente" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+            <h3 style="margin-bottom:12px;">➕ Novo Paciente</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>👤 Nome *</label><input type="text" id="cadNome" required></div>
+                <div class="form-group"><label>🎂 Nascimento *</label><input type="date" id="cadNascimento" required></div>
+                <div class="form-group"><label>👨‍⚕️ ACS *</label><input type="text" id="cadACS" required></div>
+                <div class="form-group"><label>📞 Telefone *</label><input type="text" id="cadTelefone" placeholder="(41) 99999-9999" required></div>
+                <div class="form-group"><label>🏥 UBS *</label><input type="text" id="cadUBS" required></div>
+            </div>
+            <div class="btn-group" style="margin-top:15px;">
+                <button class="btn btn-primary" onclick="salvarPaciente()">💾 Salvar</button>
+                <button class="btn" onclick="fecharModal('modalCadastroPaciente')" style="background:#a0aec0;color:white;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="modalLimiteRefil" class="modal">
+        <div class="modal-content" style="max-width:400px;">
+            <h3 style="margin-bottom:12px;">⚙️ Definir Limite de Refis</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>👤 Paciente</label><select id="limitePaciente" onchange="carregarLimiteAtual()"><option value="">Selecione</option></select></div>
+                <div class="form-group"><label>📊 Limite Mensal</label><input type="number" id="limiteValor" min="1" placeholder="Ex: 3"></div>
+                <div class="form-group"><label>📋 Limite Atual</label><input type="text" id="limiteAtual" readonly value="-"></div>
+            </div>
+            <div class="btn-group" style="margin-top:15px;">
+                <button class="btn btn-primary" onclick="salvarLimiteRefil()">💾 Salvar</button>
+                <button class="btn" onclick="fecharModal('modalLimiteRefil')" style="background:#a0aec0;color:white;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="diabetes-scripts.js"></script>
+</body>
+</html>
