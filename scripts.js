@@ -1,21 +1,22 @@
 /*
- * Arquivo: scripts.js - v2.6.1
- * Sistema: Assistência Farmacêutica
- * Correção: Modo offline simplificado + sincronização corrigida
+ * Arquivo: scripts.js - v2.7
+ * Sistema: Assistência Farmacêutica - Controlados e Especiais
+ * Atualização: Cadastro central de pacientes
  */
 
 // ============ CONFIGURAÇÃO ============
 const API_URL = 'https://farmacia-api-controlados.up.railway.app';
+const SHEET_ID_PACIENTES = '14JGqndfKqh3kVvzMJBqa13XO6z_SpXnoGTUJ-ZWtIdI'; // 🆕 Planilha central
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
-const VERSAO = '2.6.1';
+const VERSAO = '2.7';
 
 const MEDICAMENTOS_CTRL = [
-  "Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg",
-  "Clomipramina 25mg","Clorpromazina 25mg","Clorpromazina 100mg","Carbamazepina Susp.","Clonazepam Sol.","Diazepam 5mg",
-  "Fenitoína 100mg","Fenobarbital 100mg","Fenobarbital Sol. 4%","Fluoxetina 20 mg","Haloperidol 1mg","Haloperidol 5mg",
-  "Decanoato de haloperidol","Nortriptilina 25mg","Metilfenidato 10mg","Oxcarbamazepina 60mg/mL","Sertralina 50mg","Ácido Valproico 250mg",
-  "Valproato de sódio 500mg","Valproato de sódio Xpe.","Divaproato de sódio","Talidomida","Trazodona 50mg"
+  "Amitriptilina 25mg", "Amitriptilina 75mg", "Biperideno 2mg", "Carbamazepina 200mg", "Carbonato de Lítio 300mg",
+  "Clomipramina 25mg", "Clorpromazina 25mg", "Clorpromazina 100mg","Diazepam 5mg","Diazepam 10mg","Fenobarbital 100mg",
+  "Fluoxetina 20mg","Haloperidol 5mg","Haloperidol 1mg","Levomepromazina 25mg","Levomepromazina 100mg","Lorazepam 2mg",
+  "Nitrazepam 5mg","Nortriptilina 25mg","Risperidona 1mg","Risperidona 2mg","Sertralina 50mg","Sertralina 100mg",
+  "Topiramato 25mg","Topiramato 50mg"
 ];
 const MEDICAMENTOS_ESP = [
   "Sacarato de Óxido Férrico 20mg/mL injetável",
@@ -25,6 +26,7 @@ const RESPONSAVEIS = ["Cinthia M.", "Daniel C.", "Luana Q.", "Marcos J."];
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 // ============ VARIÁVEIS ============
+let pacientes = []; // 🆕 Pacientes da planilha central
 let registrosCtrl=[], registrosEsp=[], estoque={};
 let medicamentosAtivosCtrl=[...MEDICAMENTOS_CTRL], responsaveisAtivos=[...RESPONSAVEIS];
 let mesCtrl='todos', mesEsp='todos', dashboardMesCtrl=null, dashboardMesEsp=null;
@@ -36,6 +38,7 @@ let filaOffline = JSON.parse(localStorage.getItem('fila_offline')||'[]');
 function inicializar(){
     medicamentosAtivosCtrl=JSON.parse(localStorage.getItem('meds_344')||'null')||[...MEDICAMENTOS_CTRL];
     responsaveisAtivos=JSON.parse(localStorage.getItem('resps_344')||'null')||[...RESPONSAVEIS];
+    pacientes=JSON.parse(localStorage.getItem('ctrl_pacientes')||'[]'); // 🆕
     registrosCtrl=JSON.parse(localStorage.getItem('registros_344')||'[]');
     registrosEsp=JSON.parse(localStorage.getItem('registros_esp')||'[]');
     estoque=JSON.parse(localStorage.getItem('estoque_esp')||'{"Sacarato de Óxido Férrico 20mg/mL injetável":0,"Enoxaparina 40mg/0,4mL":0}');
@@ -43,13 +46,13 @@ function inicializar(){
     dashboardMesEsp=localStorage.getItem('dashboard_mes_esp')||null;
     
     carregarSelectsCtrl();carregarSelectsEsp();carregarDashboardCtrl();carregarDashboardEsp();
+    carregarSelectPacientesCtrl(); // 🆕 Carregar pacientes nos campos
     document.getElementById('ctrlData').valueAsDate=new Date();
     document.getElementById('espData').valueAsDate=new Date();
     document.getElementById('ctrlTituloContagem').textContent=MESES[new Date().getMonth()];
     atualizarModuloControlados();atualizarModuloEspeciais();
     sincronizarTudo();
     
-    // Verificar conexão
     window.addEventListener('online', () => {
         mostrarStatus('🌐 Internet restaurada! Sincronizando...', 'info');
         processarFilaOffline();
@@ -57,13 +60,9 @@ function inicializar(){
     window.addEventListener('offline', () => {
         mostrarStatus('⚠️ Sem internet! Registros salvos localmente.', 'alerta');
     });
+    if (navigator.onLine && filaOffline.length > 0) processarFilaOffline();
     
-    // Processar fila ao iniciar
-    if (navigator.onLine && filaOffline.length > 0) {
-        processarFilaOffline();
-    }
-    
-    console.log(`🚀 v${VERSAO} - Offline Ready`);
+    console.log(`🚀 v${VERSAO} - Cadastro Central de Pacientes`);
 }
 
 function trocarModulo(m){
@@ -74,89 +73,91 @@ function trocarModulo(m){
 }
 
 // ============ API ============
-async function lerPlanilha(id, range) {
+async function lerPlanilha(sheetId, range) {
     try {
         const response = await fetch(`${API_URL}/api/ler-planilha`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ planilhaId: id, range: range })
+            body: JSON.stringify({ planilhaId: sheetId, range: range })
         });
         if (!response.ok) throw new Error(`Erro ${response.status}`);
         const data = await response.json();
         return data.valores || [];
-    } catch (error) {
-        console.error('Erro ao ler:', error);
-        return [];
-    }
+    } catch (error) { console.error('Erro ao ler:', error); return []; }
 }
 
-async function escreverPlanilha(id, range, values) {
+async function escreverPlanilha(sheetId, range, values) {
     const response = await fetch(`${API_URL}/api/escrever-planilha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planilhaId: id, range: range, valores: values })
+        body: JSON.stringify({ planilhaId: sheetId, range: range, valores: values })
     });
     if (!response.ok) throw new Error(`Erro ${response.status}`);
     return await response.json();
 }
 
 // ============ FILA OFFLINE ============
-function adicionarFilaOffline(tipo, dados) {
-    filaOffline.push({
-        id: Date.now(),
-        tipo: tipo,
-        dados: dados,
-        data: new Date().toISOString()
-    });
+function adicionarFilaOffline(tipo, sheetId, range, dados) {
+    filaOffline.push({ id: Date.now(), tipo, sheetId, range, dados, data: new Date().toISOString() });
     localStorage.setItem('fila_offline', JSON.stringify(filaOffline));
 }
 
 async function processarFilaOffline() {
-    if (filaOffline.length === 0) return;
-    
+    if (filaOffline.length === 0 || !navigator.onLine) return;
     let processados = 0;
-    const filaAtual = [...filaOffline];
-    
-    for (const item of filaAtual) {
+    for (const item of [...filaOffline]) {
         try {
-            if (item.tipo === 'controlado') {
-                await escreverPlanilha(SHEET_ID_CTRL, 'Registros!A:F', item.dados);
-            } else if (item.tipo === 'especial') {
-                await escreverPlanilha(SHEET_ID_ESP, 'Página1!A:H', item.dados);
-            }
+            await escreverPlanilha(item.sheetId, item.range, item.dados);
             processados++;
             filaOffline = filaOffline.filter(f => f.id !== item.id);
-        } catch (e) {
-            console.error('Erro ao processar fila:', e);
-            break; // Para se der erro
-        }
+        } catch (e) { console.error('Erro ao processar fila:', e); break; }
     }
-    
     localStorage.setItem('fila_offline', JSON.stringify(filaOffline));
-    
-    if (processados > 0) {
-        mostrarStatus(`✅ ${processados} registro(s) sincronizado(s)!`, 'sucesso');
-        await sincronizarTudo();
-    }
+    if (processados > 0) { mostrarStatus(`✅ ${processados} registro(s) sincronizado(s)!`, 'sucesso'); await sincronizarTudo(); }
 }
 
+// ============ SINCRONIZAÇÃO ============
 async function sincronizarTudo(){
     const sd=document.getElementById('statusDot'),st=document.getElementById('statusText');
     sd.style.background='#ffa500';st.textContent='Sincronizando...';
     try{
-        const dc=await lerPlanilha(SHEET_ID_CTRL,'Registros!A1:F1000');
+        // 🆕 Pacientes da planilha central
+        const dp = await lerPlanilha(SHEET_ID_PACIENTES, 'Pacientes!A1:F1000');
+        if(dp.length>1){
+            pacientes=dp.slice(1).filter(r=>r[1]&&r[2]).map(r=>({
+                id:r[0]||'', nome:r[1]||'', nascimento:r[2]||'', acs:r[3]||'', telefone:r[4]||'', ubs:r[5]||''
+            }));
+            localStorage.setItem('ctrl_pacientes',JSON.stringify(pacientes));
+        }
+        
+        // Controlados
+        const dc=await lerPlanilha(SHEET_ID_CTRL, 'Registros!A1:F1000');
         if(dc.length>1){registrosCtrl=dc.slice(1).filter(r=>r.length>=5&&r[1]&&r[2]).map(r=>({data:nData(r[0]||''),paciente:(r[1]||'').trim(),medicamento:(r[2]||'').trim(),quantidade:parseFloat((r[3]||'0').toString().replace(',','.'))||0,responsavel:(r[4]||'').trim(),repetente:(r[5]||'Não').trim()}));localStorage.setItem('registros_344',JSON.stringify(registrosCtrl));}
+        
+        // Especiais
         try{
-            const de=await lerPlanilha(SHEET_ID_ESP,'Página1!A1:H1000');
+            const de=await lerPlanilha(SHEET_ID_ESP, 'Página1!A1:H1000');
             if(de.length>1){registrosEsp=de.slice(1).filter(r=>r.length>=5&&r[1]&&r[2]).map(r=>({data:nData(r[0]||''),paciente:(r[1]||'').trim(),medicamento:(r[2]||'').trim(),ampolas:parseInt(r[3])||0,prescritor:(r[4]||'').trim(),ampolasCiclo:parseInt(r[5])||0,ciclosEV:parseInt(r[6])||0,estoque:parseInt(r[7])||0}));localStorage.setItem('registros_esp',JSON.stringify(registrosEsp));MEDICAMENTOS_ESP.forEach(m=>{const u=registrosEsp.filter(r=>r.medicamento===m).pop();if(u)estoque[m]=u.estoque;});localStorage.setItem('estoque_esp',JSON.stringify(estoque));}
         }catch(e){console.log('Especiais:',e.message);}
+        
         sd.style.background='#48bb78';st.textContent='✅ Conectado';
     }catch(e){console.error(e);sd.style.background='#f56565';st.textContent='⚠️ Erro';}
-    carregarDashboardCtrl();carregarDashboardEsp();atualizarModuloControlados();atualizarModuloEspeciais();
+    carregarSelectPacientesCtrl(); // 🆕
+    carregarDashboardCtrl();carregarDashboardEsp();
+    atualizarModuloControlados();atualizarModuloEspeciais();
 }
 
 function nData(s){if(!s)return'';s=String(s).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;if(s.includes('/')){const p=s.split('/');if(p.length===3)return`${p[2].padStart(4,'20')}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;}try{const d=new Date(s);if(!isNaN(d.getTime()))return d.toISOString().split('T')[0];}catch(e){}return s;}
 function fData(s){if(!s)return'';try{const p=s.split('-');if(p.length===3)return`${p[2]}/${p[1]}/${p[0]}`;}catch(e){}return s;}
+
+// ============ 🆕 PACIENTES (CADASTRO CENTRAL) ============
+function carregarSelectPacientesCtrl() {
+    const selectCtrl = document.getElementById('ctrlPacienteSelect');
+    const selectEsp = document.getElementById('espPacienteSelect');
+    const opts = pacientes.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
+    if (selectCtrl) selectCtrl.innerHTML = '<option value="">Digite ou selecione</option>' + opts;
+    if (selectEsp) selectEsp.innerHTML = '<option value="">Digite ou selecione</option>' + opts;
+}
 
 // ============ STATUS + NAVEGAÇÃO ============
 function mostrarStatus(m,tipo){
@@ -212,11 +213,11 @@ async function registrarControlado(){
             else if(rep==='Mês Anterior')mostrarStatus(`🟡 MÊS ANTERIOR!\n${p} - ${m}\nRegistrado na planilha!`,'info');
             else mostrarStatus(`✅ SUCESSO!\n${p} - ${m} (${q} un.)\nRegistrado na planilha!`,'sucesso');
         }catch(e){
-            adicionarFilaOffline('controlado', valores);
+            adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:F', valores);
             mostrarStatus(`⚠️ Salvo localmente! Sincroniza depois.`,'alerta');
         }
     } else {
-        adicionarFilaOffline('controlado', valores);
+        adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:F', valores);
         mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`,'info');
     }
     
@@ -252,7 +253,7 @@ function atualizarContagemCtrl(){
     const tb=document.getElementById('ctrlTabelaContagem');if(Object.keys(ct).length===0){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum dado</td></tr>';return;}
     tb.innerHTML=Object.entries(ct).sort((a,b)=>b[1].q-a[1].q).map(([m,d])=>`<tr><td><strong>${m}</strong></td><td>${d.q.toFixed(2)}</td><td>${d.p.size}</td><td>${d.a>0?`<span class="badge badge-alert">⚠️ ${d.a}</span>`:'<span class="badge badge-ok">✅ 0</span>'}</td></tr>`).join('');
 }
-function atualizarModuloControlados(){carregarDashboardCtrl();carregarSelectsCtrl();
+function atualizarModuloControlados(){carregarDashboardCtrl();carregarSelectsCtrl();carregarSelectPacientesCtrl();
     const tc=document.getElementById('ctrlMonthTabs');tc.innerHTML=`<div class="month-tab ${mesCtrl==='todos'?'active':''}" onclick="filtrarCtrlMes('todos')">📋 Todos</div>`;
     const mc=new Set();registrosCtrl.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)mc.add(`${parseInt(p[0])}-${parseInt(p[1])-1}`);}});
     Array.from(mc).sort().forEach(k=>{const[a,me]=k.split('-').map(Number);const nm=MESES[me];const c=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===me&&parseInt(p[0])===a;}).length;tc.innerHTML+=`<div class="month-tab ${mesCtrl===nm?'active':''}" onclick="filtrarCtrlMes('${nm}')">${nm} (${c})</div>`;});
@@ -290,17 +291,9 @@ async function registrarEspecial(){
     localStorage.setItem('registros_esp',JSON.stringify(registrosEsp));
     
     if (navigator.onLine) {
-        try{
-            await escreverPlanilha(SHEET_ID_ESP,'Página1!A:H',valores);
-            mostrarStatus(`✅ DISPENSADO!\n${p} - ${m}\n${a} ampolas | Estoque: ${ne}`,'sucesso');
-        }catch(e){
-            adicionarFilaOffline('especial', valores);
-            mostrarStatus(`⚠️ Salvo localmente! Sincroniza depois.`,'alerta');
-        }
-    } else {
-        adicionarFilaOffline('especial', valores);
-        mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`,'info');
-    }
+        try{await escreverPlanilha(SHEET_ID_ESP,'Página1!A:H',valores);mostrarStatus(`✅ DISPENSADO!\n${p} - ${m}\n${a} ampolas | Estoque: ${ne}`,'sucesso');}
+        catch(e){adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);mostrarStatus(`⚠️ Salvo localmente!`,'alerta');}
+    } else {adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);mostrarStatus(`💾 Offline! Salvo localmente.`,'info');}
     
     ['espPaciente','espAmpolas','espPrescritor','espAmpolasCiclo','espCiclosEV'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('espMedicamento').value='';document.getElementById('espEstoqueDisponivel').value='Selecione';document.getElementById('espEstoqueDisponivel').style.cssText='';
@@ -342,7 +335,7 @@ function aplicarFiltrosEsp(){
     const tb=document.getElementById('espTabela');if(d.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
     tb.innerHTML=d.map(r=>`<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.ampolas}</td><td>${r.prescritor}</td><td>${r.ampolasCiclo||'-'}</td><td>${r.ciclosEV||'-'}</td></tr>`).join('');
 }
-function atualizarModuloEspeciais(){carregarDashboardEsp();carregarSelectsEsp();
+function atualizarModuloEspeciais(){carregarDashboardEsp();carregarSelectsEsp();carregarSelectPacientesCtrl();
     const tc=document.getElementById('espMonthTabs');tc.innerHTML=`<div class="month-tab ${mesEsp==='todos'?'active':''}" onclick="filtrarEspMes('todos')">📋 Todos</div>`;
     const mc=new Set();registrosEsp.forEach(r=>{if(r.data){const p=r.data.split('-');if(p.length>=2)mc.add(`${parseInt(p[0])}-${parseInt(p[1])-1}`);}});
     Array.from(mc).sort().forEach(k=>{const[a,me]=k.split('-').map(Number);const nm=MESES[me];const c=registrosEsp.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===me&&parseInt(p[0])===a;}).length;tc.innerHTML+=`<div class="month-tab ${mesEsp===nm?'active':''}" onclick="filtrarEspMes('${nm}')">${nm} (${c})</div>`;});
