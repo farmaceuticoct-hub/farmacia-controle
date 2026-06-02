@@ -12,11 +12,11 @@ const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const VERSAO = '2.7';
 
 const MEDICAMENTOS_CTRL = [
-  "Amitriptilina 25mg", "Amitriptilina 75mg", "Biperideno 2mg", "Carbamazepina 200mg", "Carbonato de Lítio 300mg",
-  "Clomipramina 25mg", "Clorpromazina 25mg", "Clorpromazina 100mg","Diazepam 5mg","Diazepam 10mg","Fenobarbital 100mg",
-  "Fluoxetina 20mg","Haloperidol 5mg","Haloperidol 1mg","Levomepromazina 25mg","Levomepromazina 100mg","Lorazepam 2mg",
-  "Nitrazepam 5mg","Nortriptilina 25mg","Risperidona 1mg","Risperidona 2mg","Sertralina 50mg","Sertralina 100mg",
-  "Topiramato 25mg","Topiramato 50mg"
+  "Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg",
+  "Clomipramina 25mg","Clorpromazina 25mg","Clorpromazina 100mg","Carbamazepina Susp.","Clonazepam Sol.","Diazepam 5mg",
+  "Fenitoína 100mg","Fenobarbital 100mg","Fenobarbital Sol. 4%","Fluoxetina 20 mg","Haloperidol 1mg","Haloperidol 5mg",
+  "Decanoato de haloperidol","Nortriptilina 25mg","Metilfenidato 10mg","Oxcarbamazepina 60mg/mL","Sertralina 50mg","Ácido Valproico 250mg",
+  "Valproato de sódio 500mg","Valproato de sódio Xpe.","Divaproato de sódio","Talidomida","Trazodona 50mg"
 ];
 const MEDICAMENTOS_ESP = [
   "Sacarato de Óxido Férrico 20mg/mL injetável",
