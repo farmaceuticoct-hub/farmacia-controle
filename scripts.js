@@ -1,7 +1,7 @@
 /*
- * Arquivo: scripts.js - v3.1.0
+ * Arquivo: scripts.js - v3.2.0
  * Sistema: Assistência Farmacêutica - Controlados, Especiais e Diabetes
- * Integração completa: pacientes + diabetes + controlados + especiais
+ * Estrutura fixa no HTML para evitar problemas de criação dinâmica
  * Data: 2025-03-19
  */
 
@@ -11,7 +11,7 @@ const SHEET_ID_PACIENTES = '14JGqndfKqh3kVvzMJBqa13XO6z_SpXnoGTUJ-ZWtIdI';
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const SHEET_ID_DIABETES = '1POcsyqGHIN908kgiE_be3oyz9ILBntiSv7hn7iyXJt4';
-const VERSAO = '3.1.0';
+const VERSAO = '3.2.0';
 
 const MEDICAMENTOS_CTRL = [
   "Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg",
@@ -35,18 +35,13 @@ const ITENS_DIABETES = {
 };
 
 // ============ VARIÁVEIS ============
-// Pacientes (central)
 let pacientes = [];
-// Controlados
 let registrosCtrl = [];
-// Especiais
 let registrosEsp = [];
 let estoque = {};
-// Diabetes
 let registrosDiabetes = { canetas: [], refis: [], insumos: [] };
 let limitesRefil = JSON.parse(localStorage.getItem('limites_refil') || '{}');
 
-// Configurações
 let medicamentosAtivosCtrl = [...MEDICAMENTOS_CTRL];
 let responsaveisAtivos = [...RESPONSAVEIS];
 let mesCtrl = 'todos', mesEsp = 'todos', mesDiabetes = 'todos';
@@ -57,9 +52,6 @@ let filaOffline = JSON.parse(localStorage.getItem('fila_offline') || '[]');
 
 // ============ INICIALIZAÇÃO ============
 function inicializar() {
-    // Cria a aba Diabetes (se não existir)
-    criarAbaDiabetes();
-
     // Carrega dados do localStorage
     medicamentosAtivosCtrl = JSON.parse(localStorage.getItem('meds_344') || 'null') || [...MEDICAMENTOS_CTRL];
     responsaveisAtivos = JSON.parse(localStorage.getItem('resps_344') || 'null') || [...RESPONSAVEIS];
@@ -113,126 +105,8 @@ function inicializar() {
     console.log(`🚀 v${VERSAO} - Sistema unificado com Diabetes`);
 }
 
-// ============ CRIAÇÃO DA ABA DIABETES (dinâmica) ============
-function criarAbaDiabetes() {
-    if (document.getElementById('modulo-diabetes')) return;
-
-    const navTabs = document.querySelector('.nav-tabs');
-    if (!navTabs) return;
-
-    // Aba no menu
-    const tab = document.createElement('div');
-    tab.className = 'nav-tab';
-    tab.setAttribute('onclick', "trocarModulo('diabetes')");
-    tab.innerHTML = '🩸 Diabetes <span class="nav-tab-badge">Novo</span>';
-    navTabs.appendChild(tab);
-
-    // Conteúdo
-    const content = document.querySelector('.content');
-    if (!content) return;
-
-    const modulo = document.createElement('div');
-    modulo.className = 'modulo';
-    modulo.id = 'modulo-diabetes';
-    modulo.innerHTML = `
-        <div class="dashboard-header">
-            <h2>📊 Dashboard - Diabetes</h2>
-            <div class="mes-selector">
-                <label>📅 Mês:</label>
-                <select id="dashboardMesDiabetes" onchange="atualizarDashboardDiabetes()">
-                    <option value="atual">Mês Atual</option>
-                </select>
-            </div>
-        </div>
-        <div class="stats-grid">
-            <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="diabetesTotal">0</div><small id="diabetesMesLabel">Mês atual</small></div>
-            <div class="stat-card"><h3>🩸 Pacientes</h3><div class="number" id="diabetesPacientes">0</div><small>atendidos</small></div>
-            <div class="stat-card"><h3>📦 Itens</h3><div class="number" id="diabetesItens">0</div><small>dispensados</small></div>
-            <div class="stat-card"><h3>🔄 Fila</h3><div class="number" id="diabetesFila">0</div><small>pendentes</small></div>
-        </div>
-
-        <!-- Cadastro de Paciente -->
-        <div class="form-section">
-            <h2>👤 Cadastrar Paciente</h2>
-            <div class="form-grid">
-                <div class="form-group"><label>Nome *</label><input type="text" id="diabPacNome" placeholder="Nome completo" required></div>
-                <div class="form-group"><label>Data de Nascimento *</label><input type="date" id="diabPacNasc" required></div>
-                <div class="form-group"><label>ACS</label><input type="text" id="diabPacACS" placeholder="Agente de Saúde"></div>
-                <div class="form-group"><label>Telefone</label><input type="tel" id="diabPacTel" placeholder="(XX) XXXX-XXXX"></div>
-                <div class="form-group"><label>UBS</label><input type="text" id="diabPacUBS" placeholder="Unidade Básica"></div>
-            </div>
-            <button class="btn btn-primary" onclick="cadastrarPaciente()">💾 Salvar Paciente</button>
-        </div>
-
-        <!-- Dispensação Diabetes -->
-        <div class="form-section">
-            <h2>📝 Nova Dispensação - Diabetes</h2>
-            <div class="form-grid">
-                <div class="form-group"><label>📅 Data *</label><input type="date" id="diabetesData" required></div>
-                <div class="form-group">
-                    <label>👤 Paciente *</label>
-                    <input type="text" id="diabetesPaciente" placeholder="Digite o nome" list="listaPacientesDiabetes" required autocomplete="off">
-                    <datalist id="listaPacientesDiabetes"></datalist>
-                </div>
-                <div class="form-group"><label>📦 Tipo *</label>
-                    <select id="diabetesTipo" required onchange="atualizarItensDiabetes()">
-                        <option value="">Selecione</option>
-                        <option value="Canetas">Canetas</option>
-                        <option value="Refis">Refis</option>
-                        <option value="Insumos">Insumos</option>
-                    </select>
-                </div>
-                <div class="form-group"><label>🛒 Item *</label>
-                    <select id="diabetesItem" required><option value="">Selecione primeiro o Tipo</option></select>
-                </div>
-                <div class="form-group"><label>🔢 Quantidade *</label><input type="number" id="diabetesQuantidade" min="1" placeholder="Ex: 2" required></div>
-                <div class="form-group"><label>📝 Observação</label><input type="text" id="diabetesObs" placeholder="Opicional"></div>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-dia" onclick="registrarDiabetes()">🩸 Registrar</button>
-                <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
-            </div>
-            <div class="sync-info" id="syncInfoDiabetes">🔄 Google Sheets API</div>
-        </div>
-
-        <h3 class="section-title">📂 Histórico - Diabetes</h3>
-        <div class="month-tabs" id="diabetesMonthTabs">
-            <div class="month-tab active" onclick="filtrarDiabetesMes('todos')">📋 Todos</div>
-        </div>
-        <div class="filter-bar">
-            <select id="diabetesFiltroTipo" onchange="aplicarFiltrosDiabetes()">
-                <option value="todos">Todos os Tipos</option>
-                <option value="Canetas">Canetas</option>
-                <option value="Refis">Refis</option>
-                <option value="Insumos">Insumos</option>
-            </select>
-            <input type="text" id="diabetesFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosDiabetes()">
-            <span id="diabetesResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
-        </div>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Item</th><th>Qtd</th><th>Obs</th></tr></thead>
-                <tbody id="diabetesTabela"><tr><td colspan="6" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody>
-            </table>
-        </div>
-    `;
-
-    content.appendChild(modulo);
-
-    // Estilo extra para botão diabetes
-    if (!document.getElementById('estiloDiabetes')) {
-        const style = document.createElement('style');
-        style.id = 'estiloDiabetes';
-        style.textContent = `
-            .btn-dia { background: linear-gradient(135deg, #00b894, #00b894); color: white; }
-            .btn-dia:hover { background: #00a381; transform: scale(1.02); }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// ============ TROCA DE MÓDULO (com suporte a diabetes) ============
-window.trocarModulo = function(modulo) {
+// ============ TROCA DE MÓDULO ============
+function trocarModulo(modulo) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.modulo').forEach(m => m.classList.remove('active'));
 
@@ -252,7 +126,7 @@ window.trocarModulo = function(modulo) {
         const mod = document.getElementById('modulo-diabetes');
         if (mod) mod.classList.add('active');
     }
-};
+}
 
 // ============ API ============
 async function lerPlanilha(sheetId, range) {
@@ -384,14 +258,23 @@ async function sincronizarTudo() {
             try {
                 const dados = await lerPlanilha(SHEET_ID_DIABETES, aba.range);
                 if (dados.length > 1) {
-                    const registros = dados.slice(1).filter(r => r[0] && r[1]).map(r => ({
-                        data: nData(r[0] || ''),
-                        paciente: (r[1] || '').trim(),
-                        // Para refis e insumos, campos específicos
-                        ...(aba.destino === 'canetas' && { lote: (r[2] || '').trim(), obs: (r[3] || '').trim() }),
-                        ...(aba.destino === 'refis' && { quantidade: parseInt(r[2]) || 0, limite: parseInt(r[3]) || 0 }),
-                        ...(aba.destino === 'insumos' && { tipo: (r[2] || '').trim(), quantidade: parseInt(r[3]) || 0 })
-                    }));
+                    const registros = dados.slice(1).filter(r => r[0] && r[1]).map(r => {
+                        let obj = {
+                            data: nData(r[0] || ''),
+                            paciente: (r[1] || '').trim()
+                        };
+                        if (aba.destino === 'canetas') {
+                            obj.lote = (r[2] || '').trim();
+                            obj.obs = (r[3] || '').trim();
+                        } else if (aba.destino === 'refis') {
+                            obj.quantidade = parseInt(r[2]) || 0;
+                            obj.limite = parseInt(r[3]) || 0;
+                        } else if (aba.destino === 'insumos') {
+                            obj.tipo = (r[2] || '').trim();
+                            obj.quantidade = parseInt(r[3]) || 0;
+                        }
+                        return obj;
+                    });
                     registrosDiabetes[aba.destino] = registros;
                 }
             } catch (e) { console.log(`Erro ao ler ${aba.nome}:`, e.message); }
@@ -620,7 +503,6 @@ async function registrarDiabetes() {
         return;
     }
 
-    // Monta valores conforme o tipo
     let valores, range, destino;
     if (tipo === 'Canetas') {
         valores = [data, paciente, item, obs];
@@ -663,7 +545,6 @@ async function registrarDiabetes() {
 
     if (navigator.onLine) {
         try {
-            // Anexar à planilha (ler + append)
             const dadosExistentes = await lerPlanilha(SHEET_ID_DIABETES, range);
             const novasLinhas = dadosExistentes.concat([valores]);
             await escreverPlanilha(SHEET_ID_DIABETES, range, novasLinhas);
@@ -726,16 +607,19 @@ function aplicarFiltrosDiabetes() {
         tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';
         return;
     }
-    tb.innerHTML = dados.map(r => `
+    tb.innerHTML = dados.map(r => {
+        let itemDisplay = r.lote || r.tipo || '';
+        let qtdDisplay = r.quantidade || (r.lote ? '1' : '');
+        return `
         <tr>
             <td>${fData(r.data)}</td>
             <td>${r.paciente}</td>
             <td>${r.tipo}</td>
-            <td>${r.lote || r.tipo === 'Insumos' ? r.tipo : (r.item || '')}</td>
-            <td>${r.quantidade || r.lote ? '1' : ''}</td>
+            <td>${itemDisplay}</td>
+            <td>${qtdDisplay}</td>
             <td>${r.obs || '-'}</td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
     const count = document.getElementById('diabetesResultCount');
     if (count) count.textContent = `${dados.length} registros`;
 }
@@ -776,7 +660,8 @@ function atualizarModuloDiabetes() {
     aplicarFiltrosDiabetes();
 }
 
-// ============ CONTROLADOS (código original adaptado) ============
+// ============ CONTROLADOS (código original) ============
+// (Mantido igual ao anterior, com verificações de existência de elementos)
 function carregarSelectsCtrl() {
     const med = document.getElementById('ctrlMedicamento');
     const filtro = document.getElementById('ctrlFiltroMed');
@@ -807,20 +692,15 @@ function verificarRepetenteCtrl() {
     if (!p || !m || !d) { i.value = 'Preencha os campos'; i.style.cssText = ''; return; }
     const pd = d.split('-');
     if (pd.length < 2) return;
-    const as = parseInt(pd[0]),
-        ms = parseInt(pd[1]) - 1,
-        pn = p.toLowerCase().trim(),
-        mn = m.toLowerCase().trim();
+    const as = parseInt(pd[0]), ms = parseInt(pd[1]) - 1, pn = p.toLowerCase().trim(), mn = m.toLowerCase().trim();
     const mm = registrosCtrl.filter(r => {
         if (!r.data) return false;
         const pr = r.data.split('-');
         if (pr.length < 2) return false;
         return parseInt(pr[1]) - 1 === ms && parseInt(pr[0]) === as && (r.paciente || '').toLowerCase() === pn && (r.medicamento || '').toLowerCase() === mn;
     });
-    let ma = ms - 1,
-        aa = as;
-    if (ma < 0) { ma = 11;
-        aa--; }
+    let ma = ms - 1, aa = as;
+    if (ma < 0) { ma = 11; aa--; }
     const me = registrosCtrl.filter(r => {
         if (!r.data) return false;
         const pr = r.data.split('-');
@@ -840,12 +720,7 @@ function verificarRepetenteCtrl() {
 }
 
 async function registrarControlado() {
-    const d = document.getElementById('ctrlData').value,
-        p = document.getElementById('ctrlPaciente').value.trim(),
-        m = document.getElementById('ctrlMedicamento').value,
-        q = parseFloat(document.getElementById('ctrlQuantidade').value),
-        r = document.getElementById('ctrlResponsavel').value,
-        ri = document.getElementById('ctrlRepetente').value;
+    const d = document.getElementById('ctrlData').value, p = document.getElementById('ctrlPaciente').value.trim(), m = document.getElementById('ctrlMedicamento').value, q = parseFloat(document.getElementById('ctrlQuantidade').value), r = document.getElementById('ctrlResponsavel').value, ri = document.getElementById('ctrlRepetente').value;
     if (!d || !p || !m || !q || !r) return mostrarStatus('⚠️ Preencha todos os campos obrigatórios!', 'alerta');
     if (q <= 0) return mostrarStatus('⚠️ Quantidade deve ser maior que zero!', 'alerta');
     let rep = 'Não';
@@ -870,18 +745,13 @@ async function registrarControlado() {
         mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`, 'info');
     }
 
-    ['ctrlPaciente', 'ctrlMedicamento', 'ctrlQuantidade', 'ctrlResponsavel'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
+    ['ctrlPaciente', 'ctrlMedicamento', 'ctrlQuantidade', 'ctrlResponsavel'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const repEl = document.getElementById('ctrlRepetente');
-    if (repEl) { repEl.value = 'Preencha os campos';
-        repEl.style.cssText = ''; }
+    if (repEl) { repEl.value = 'Preencha os campos'; repEl.style.cssText = ''; }
     const dataEl = document.getElementById('ctrlData');
     if (dataEl) dataEl.valueAsDate = new Date();
     const ds = document.getElementById('dashboardMesControlados');
-    if (ds && ds.value !== 'atual') { dashboardMesCtrl = ds.value;
-        localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); }
+    if (ds && ds.value !== 'atual') { dashboardMesCtrl = ds.value; localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); }
     carregarDashboardCtrl();
     atualizarModuloControlados();
 }
@@ -890,17 +760,9 @@ function atualizarDashboardControlados() {
     const s = document.getElementById('dashboardMesControlados');
     if (!s) return;
     const v = s.value;
-    if (v !== 'atual') { dashboardMesCtrl = v;
-        localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); } else { dashboardMesCtrl = null;
-        localStorage.removeItem('dashboard_mes_344'); }
+    if (v !== 'atual') { dashboardMesCtrl = v; localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); } else { dashboardMesCtrl = null; localStorage.removeItem('dashboard_mes_344'); }
     let mf, af, nm;
-    if (v === 'atual') { const h = new Date();
-        mf = h.getMonth();
-        af = h.getFullYear();
-        nm = MESES[mf]; } else { const [a, me] = v.split('-').map(Number);
-        mf = me;
-        af = a;
-        nm = MESES[me]; }
+    if (v === 'atual') { const h = new Date(); mf = h.getMonth(); af = h.getFullYear(); nm = MESES[mf]; } else { const [a, me] = v.split('-').map(Number); mf = me; af = a; nm = MESES[me]; }
     const mesLabel = document.getElementById('ctrlMesLabel');
     if (mesLabel) mesLabel.textContent = `${nm} de ${af}`;
     const rf = registrosCtrl.filter(r => { if (!r.data) return false; const p = r.data.split('-'); return p.length >= 2 && parseInt(p[1]) - 1 === mf && parseInt(p[0]) === af; });
@@ -914,8 +776,7 @@ function atualizarDashboardControlados() {
     if (medEl) medEl.textContent = new Set(rf.map(r => r.medicamento)).size;
 }
 
-function filtrarCtrlMes(m) { mesCtrl = m;
-    atualizarModuloControlados(); }
+function filtrarCtrlMes(m) { mesCtrl = m; atualizarModuloControlados(); }
 
 function aplicarFiltrosCtrl() {
     const fm = document.getElementById('ctrlFiltroMed');
@@ -932,20 +793,15 @@ function aplicarFiltrosCtrl() {
     if (!tb) return;
     if (d.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;">Nenhum registro</td></tr>'; return; }
     tb.innerHTML = d.map(r => {
-        let bc = 'badge-ok',
-            bt = '✅ Não';
-        if (r.repetente === 'Sim') { bc = 'badge-alert';
-            bt = '🔴 Sim'; } else if (r.repetente === 'Mês Anterior') { bc = 'badge-mes-anterior';
-            bt = '🟡 Mês Ant.'; }
+        let bc = 'badge-ok', bt = '✅ Não';
+        if (r.repetente === 'Sim') { bc = 'badge-alert'; bt = '🔴 Sim'; } else if (r.repetente === 'Mês Anterior') { bc = 'badge-mes-anterior'; bt = '🟡 Mês Ant.'; }
         return `<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.quantidade}</td><td>${r.responsavel}</td><td><span class="badge ${bc}">${bt}</span></td></tr>`;
     }).join('');
 }
 
 function atualizarContagemCtrl() {
-    const ma = new Date().getMonth(),
-        aa = new Date().getFullYear();
-    let mf = ma,
-        af = aa;
+    const ma = new Date().getMonth(), aa = new Date().getFullYear();
+    let mf = ma, af = aa;
     if (mesCtrl !== 'todos') { mf = MESES.indexOf(mesCtrl); if (mf < 0) mf = ma; }
     const rm = registrosCtrl.filter(r => { if (!r.data) return false; const p = r.data.split('-'); return p.length >= 2 && parseInt(p[1]) - 1 === mf && parseInt(p[0]) === af; });
     const titulo = document.getElementById('ctrlTituloContagem');
@@ -995,11 +851,10 @@ function exportarCSVCtrl() {
     mostrarStatus('✅ CSV exportado!', 'sucesso');
 }
 
-// ============ ESPECIAIS (código original adaptado) ============
+// ============ ESPECIAIS (código original) ============
+// (Mantido igual ao anterior, com verificações)
 function carregarSelectsEsp() {
-    const sm = document.getElementById('espMedicamento'),
-        sf = document.getElementById('espFiltroMed'),
-        se = document.getElementById('entradaMedicamento');
+    const sm = document.getElementById('espMedicamento'), sf = document.getElementById('espFiltroMed'), se = document.getElementById('entradaMedicamento');
     const opts = MEDICAMENTOS_ESP.map(m => `<option value="${m}">${m}</option>`).join('');
     if (sm) sm.innerHTML = '<option value="">Selecione</option>' + opts;
     if (sf) sf.innerHTML = '<option value="todos">Todos</option>' + opts;
@@ -1020,10 +875,8 @@ function carregarDashboardEsp() {
 }
 
 function atualizarEstoqueDisponivel() {
-    const med = document.getElementById('espMedicamento').value,
-        input = document.getElementById('espEstoqueDisponivel');
-    if (!med) { input.value = 'Selecione o medicamento';
-        input.style.cssText = ''; return; }
+    const med = document.getElementById('espMedicamento').value, input = document.getElementById('espEstoqueDisponivel');
+    if (!med) { input.value = 'Selecione o medicamento'; input.style.cssText = ''; return; }
     const disp = estoque[med] || 0;
     input.value = `${disp} unidades disponíveis`;
     if (disp <= cfgEstoqueCritico) input.style.cssText = 'color:#e53e3e!important;background:#fed7d7!important;font-weight:bold;';
@@ -1032,13 +885,7 @@ function atualizarEstoqueDisponivel() {
 }
 
 async function registrarEspecial() {
-    const d = document.getElementById('espData').value,
-        p = document.getElementById('espPaciente').value.trim(),
-        m = document.getElementById('espMedicamento').value,
-        a = parseInt(document.getElementById('espAmpolas').value),
-        pr = document.getElementById('espPrescritor').value.trim(),
-        ac = parseInt(document.getElementById('espAmpolasCiclo').value) || 0,
-        cv = parseInt(document.getElementById('espCiclosEV').value) || 0;
+    const d = document.getElementById('espData').value, p = document.getElementById('espPaciente').value.trim(), m = document.getElementById('espMedicamento').value, a = parseInt(document.getElementById('espAmpolas').value), pr = document.getElementById('espPrescritor').value.trim(), ac = parseInt(document.getElementById('espAmpolasCiclo').value) || 0, cv = parseInt(document.getElementById('espCiclosEV').value) || 0;
     if (!d || !p || !m || !a || !pr) return mostrarStatus('⚠️ Preencha todos os campos!', 'alerta');
     if (a <= 0) return mostrarStatus('⚠️ Quantidade inválida!', 'alerta');
     const ea = estoque[m] || 0;
@@ -1063,27 +910,21 @@ async function registrarEspecial() {
         mostrarStatus(`💾 Offline! Salvo localmente.`, 'info');
     }
 
-    ['espPaciente', 'espAmpolas', 'espPrescritor', 'espAmpolasCiclo', 'espCiclosEV'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
+    ['espPaciente', 'espAmpolas', 'espPrescritor', 'espAmpolasCiclo', 'espCiclosEV'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const medEl = document.getElementById('espMedicamento');
     if (medEl) medEl.value = '';
     const estEl = document.getElementById('espEstoqueDisponivel');
-    if (estEl) { estEl.value = 'Selecione';
-        estEl.style.cssText = ''; }
+    if (estEl) { estEl.value = 'Selecione'; estEl.style.cssText = ''; }
     const dataEl = document.getElementById('espData');
     if (dataEl) dataEl.valueAsDate = new Date();
     const ds = document.getElementById('dashboardMesEspeciais');
-    if (ds && ds.value !== 'atual') { dashboardMesEsp = ds.value;
-        localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); }
+    if (ds && ds.value !== 'atual') { dashboardMesEsp = ds.value; localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); }
     carregarDashboardEsp();
     atualizarModuloEspeciais();
 }
 
 async function registrarEntradaEstoque() {
-    const m = document.getElementById('entradaMedicamento').value,
-        q = parseInt(document.getElementById('entradaQuantidade').value);
+    const m = document.getElementById('entradaMedicamento').value, q = parseInt(document.getElementById('entradaQuantidade').value);
     if (!m || !q || q <= 0) { alert('⚠️ Preencha os campos!'); return; }
     estoque[m] = (estoque[m] || 0) + q;
     const ne = estoque[m];
@@ -1101,17 +942,9 @@ function atualizarDashboardEspeciais() {
     const s = document.getElementById('dashboardMesEspeciais');
     if (!s) return;
     const v = s.value;
-    if (v !== 'atual') { dashboardMesEsp = v;
-        localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); } else { dashboardMesEsp = null;
-        localStorage.removeItem('dashboard_mes_esp'); }
+    if (v !== 'atual') { dashboardMesEsp = v; localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); } else { dashboardMesEsp = null; localStorage.removeItem('dashboard_mes_esp'); }
     let mf, af, nm;
-    if (v === 'atual') { const h = new Date();
-        mf = h.getMonth();
-        af = h.getFullYear();
-        nm = MESES[mf]; } else { const [a, me] = v.split('-').map(Number);
-        mf = me;
-        af = a;
-        nm = MESES[me]; }
+    if (v === 'atual') { const h = new Date(); mf = h.getMonth(); af = h.getFullYear(); nm = MESES[mf]; } else { const [a, me] = v.split('-').map(Number); mf = me; af = a; nm = MESES[me]; }
     const mesLabel = document.getElementById('espMesLabel');
     if (mesLabel) mesLabel.textContent = `${nm} de ${af}`;
     const rf = registrosEsp.filter(r => { if (!r.data) return false; const p = r.data.split('-'); return p.length >= 2 && parseInt(p[1]) - 1 === mf && parseInt(p[0]) === af; });
@@ -1130,23 +963,13 @@ function atualizarStatusEstoque() {
     if (!div) return;
     div.innerHTML = MEDICAMENTOS_ESP.map(m => {
         const q = estoque[m] || 0;
-        let cls = 'estoque-ok',
-            badge = 'badge-estoque-ok',
-            status = '🟢 Normal',
-            icone = '✅';
-        if (q <= cfgEstoqueCritico) { cls = 'estoque-baixo';
-            badge = 'badge-estoque-baixo';
-            status = '🔴 Crítico';
-            icone = '🚨'; } else if (q <= cfgEstoqueBaixo) { cls = 'estoque-medio';
-            badge = 'badge-estoque-medio';
-            status = '🟡 Baixo';
-            icone = '⚠️'; }
+        let cls = 'estoque-ok', badge = 'badge-estoque-ok', status = '🟢 Normal', icone = '✅';
+        if (q <= cfgEstoqueCritico) { cls = 'estoque-baixo'; badge = 'badge-estoque-baixo'; status = '🔴 Crítico'; icone = '🚨'; } else if (q <= cfgEstoqueBaixo) { cls = 'estoque-medio'; badge = 'badge-estoque-medio'; status = '🟡 Baixo'; icone = '⚠️'; }
         return `<div class="estoque-card ${cls}"><div><strong>${icone} ${m}</strong><br><small><strong>${q}</strong> unidades</small></div><span class="badge ${badge}">${status}</span></div>`;
     }).join('');
 }
 
-function filtrarEspMes(m) { mesEsp = m;
-    atualizarModuloEspeciais(); }
+function filtrarEspMes(m) { mesEsp = m; atualizarModuloEspeciais(); }
 
 function aplicarFiltrosEsp() {
     const fm = document.getElementById('espFiltroMed');
@@ -1199,7 +1022,7 @@ function exportarCSVEsp() {
     mostrarStatus('✅ CSV exportado!', 'sucesso');
 }
 
-// ============ CONFIGURAÇÕES (sem alterações) ============
+// ============ CONFIGURAÇÕES ============
 function abrirConfig() {
     document.getElementById('cfgMedsCtrl').value = medicamentosAtivosCtrl.join('\n');
     document.getElementById('cfgResps').value = responsaveisAtivos.join('\n');
@@ -1274,17 +1097,10 @@ function importarConfig(event) {
     reader.onload = function(e) {
         try {
             const config = JSON.parse(e.target.result);
-            if (config.medicamentosCtrl) { medicamentosAtivosCtrl = config.medicamentosCtrl;
-                localStorage.setItem('meds_344', JSON.stringify(medicamentosAtivosCtrl)); }
-            if (config.responsaveis) { responsaveisAtivos = config.responsaveis;
-                localStorage.setItem('resps_344', JSON.stringify(responsaveisAtivos)); }
-            if (config.medicamentosEsp) { MEDICAMENTOS_ESP.length = 0;
-                config.medicamentosEsp.forEach(m => MEDICAMENTOS_ESP.push(m));
-                localStorage.setItem('meds_esp_list', JSON.stringify(MEDICAMENTOS_ESP)); }
-            if (config.limites) { cfgEstoqueCritico = config.limites.estoqueCritico || 5;
-                cfgEstoqueBaixo = config.limites.estoqueBaixo || 15;
-                localStorage.setItem('cfg_estoque_critico', cfgEstoqueCritico);
-                localStorage.setItem('cfg_estoque_baixo', cfgEstoqueBaixo); }
+            if (config.medicamentosCtrl) { medicamentosAtivosCtrl = config.medicamentosCtrl; localStorage.setItem('meds_344', JSON.stringify(medicamentosAtivosCtrl)); }
+            if (config.responsaveis) { responsaveisAtivos = config.responsaveis; localStorage.setItem('resps_344', JSON.stringify(responsaveisAtivos)); }
+            if (config.medicamentosEsp) { MEDICAMENTOS_ESP.length = 0; config.medicamentosEsp.forEach(m => MEDICAMENTOS_ESP.push(m)); localStorage.setItem('meds_esp_list', JSON.stringify(MEDICAMENTOS_ESP)); }
+            if (config.limites) { cfgEstoqueCritico = config.limites.estoqueCritico || 5; cfgEstoqueBaixo = config.limites.estoqueBaixo || 15; localStorage.setItem('cfg_estoque_critico', cfgEstoqueCritico); localStorage.setItem('cfg_estoque_baixo', cfgEstoqueBaixo); }
             carregarSelectsCtrl();
             carregarSelectsEsp();
             atualizarStatusEstoque();
