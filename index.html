@@ -58,7 +58,11 @@
                     <div class="info-box">🔴 <strong>Repetente:</strong> Mesmo paciente + mesmo medicamento no <strong>mesmo mês</strong>.<br>🟡 <strong>Mês Anterior:</strong> Mesmo paciente + mesmo medicamento no <strong>mês passado</strong>.</div>
                     <div class="form-grid">
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="ctrlData" required onchange="verificarRepetenteCtrl()"></div>
-                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="ctrlPaciente" placeholder="Nome completo" required oninput="verificarRepetenteCtrl()"></div>
+                        <div class="form-group">
+    <label>👤 Paciente *</label>
+    <input type="text" id="ctrlPaciente" placeholder="Digite o nome do paciente" list="listaPacientesCtrl" required oninput="verificarRepetenteCtrl()" autocomplete="off">
+    <datalist id="listaPacientesCtrl"></datalist>
+</div>
                         <div class="form-group"><label>💊 Medicamento *</label><select id="ctrlMedicamento" required onchange="verificarRepetenteCtrl()"><option value="">Selecione</option></select></div>
                         <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="ctrlQuantidade" min="1" placeholder="Ex: 30" required></div>
                         <div class="form-group"><label>👨‍⚕️ Responsável *</label><select id="ctrlResponsavel" required><option value="">Selecione</option></select></div>
@@ -93,7 +97,11 @@
                     <h2>📝 Nova Dispensação - Especial</h2>
                     <div class="form-grid">
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="espData" required></div>
-                        <div class="form-group"><label>👤 Paciente *</label><input type="text" id="espPaciente" placeholder="Nome completo" required></div>
+                        <div class="form-group">
+    <label>👤 Paciente *</label>
+    <input type="text" id="espPaciente" placeholder="Digite o nome do paciente" list="listaPacientesEsp" required autocomplete="off">
+    <datalist id="listaPacientesEsp"></datalist>
+</div>
                         <div class="form-group"><label>💉 Medicamento *</label><select id="espMedicamento" required onchange="atualizarEstoqueDisponivel()"><option value="">Selecione</option></select></div>
                         <div class="form-group"><label>📦 Ampolas *</label><input type="number" id="espAmpolas" min="1" placeholder="Ex: 3" required oninput="atualizarEstoqueDisponivel()"></div>
                         <div class="form-group"><label>👨‍⚕️ Prescritor *</label><input type="text" id="espPrescritor" placeholder="Nome do médico" required></div>
