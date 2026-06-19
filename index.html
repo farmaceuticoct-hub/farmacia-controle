@@ -1,6 +1,7 @@
 <!--
   Sistema: Assistência Farmacêutica v3.2
-  Unificado: Controlados + Especiais + Diabetes
+  Atualizações: Estoque baixo em Controlados, Ciclo atual ordinais em Especiais,
+  ACS/UBS editáveis via configurações em Diabetes.
 -->
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -9,12 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assistência Farmacêutica v3.2</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Estilos adicionais para Diabetes */
-        .btn-dia { background: linear-gradient(135deg, #00b894, #00b894); color: white; }
-        .btn-dia:hover { background: #00a381; transform: scale(1.02); }
-        .badge-limite-excedido { background: var(--danger-claro); color: #742a2a; font-weight: bold; }
-    </style>
 </head>
 <body>
     <div class="status-registro" id="statusFlutuante"></div>
@@ -25,7 +20,6 @@
     </div>
 
     <div class="container">
-        <!-- HEADER -->
         <div class="header">
             <div class="header-logo">
                 <img src="logo.png" alt="Assistência Farmacêutica" class="logo-img">
@@ -37,17 +31,15 @@
             <div style="display:flex;align-items:center;gap:8px;">
                 <button class="btn btn-sm btn-outline" onclick="abrirConfig()" style="color:white;border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.1);font-size:1.1em;" title="Painel de Configurações">⚙️</button>
                 <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);padding:8px 16px;border-radius:50px;font-size:0.85em;color:white;">
-                    <div id="statusDot" style="width:10px;height:10px;border-radius:50%;background:#ffa500;"></div>
-                    <span id="statusText">Pronto</span>
+                    <div id="statusDot" style="width:10px;height:10px;border-radius:50%;background:#ffa500;"></div><span id="statusText">Pronto</span>
                 </div>
             </div>
         </div>
         
-        <!-- NAVEGAÇÃO -->
         <div class="nav-tabs">
             <div class="nav-tab active" onclick="trocarModulo('controlados')">💊 Controlados <span class="nav-tab-badge">344/98</span></div>
             <div class="nav-tab" onclick="trocarModulo('especiais')">💉 Especiais <span class="nav-tab-badge">Estoque</span></div>
-            <div class="nav-tab" onclick="trocarModulo('diabetes')">🩸 Diabetes <span class="nav-tab-badge">Novo</span></div>
+            <div class="nav-tab" onclick="trocarModulo('diabetes')">🩸 Diabetes</div>
         </div>
         
         <div class="content">
@@ -62,7 +54,7 @@
                 </div>
                 <div class="form-section">
                     <h2>📝 Nova Dispensação - Controlado</h2>
-                    <div class="info-box">🔴 <strong>Repetente:</strong> Mesmo paciente + mesmo medicamento no <strong>mesmo mês</strong>.<br>🟡 <strong>Mês Anterior:</strong> Mesmo paciente + mesmo medicamento no <strong>mês passado</strong>.</div>
+                    <div class="info-box">🔴 <strong>Repetente:</strong> Mesmo paciente + mesmo medicamento no <strong>mesmo mês</strong>.<br>🟡 <strong>Mês Anterior:</strong> Mesmo paciente + mesmo medicamento no <strong>mês passado</strong>.<br>⚠️ <strong>Estoque baixo:</strong> Medicamento com estoque baixo – dispensação para 1 mês (pendente próximo mês).</div>
                     <div class="form-grid">
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="ctrlData" required onchange="verificarRepetenteCtrl()"></div>
                         <div class="form-group">
@@ -83,10 +75,24 @@
                     <div class="sync-info" id="syncInfoCtrl">🔄 Google Sheets API</div>
                 </div>
                 <h3 class="section-title">📂 Histórico</h3>
-                <div class="legenda"><span class="legenda-item"><span class="legenda-dot ld-ok"></span> ✅ Não</span><span class="legenda-item"><span class="legenda-dot ld-mes-anterior"></span> 🟡 Mês Anterior</span><span class="legenda-item"><span class="legenda-dot ld-repetente"></span> 🔴 Sim</span></div>
+                <div class="legenda">
+                    <span class="legenda-item"><span class="legenda-dot ld-ok"></span> ✅ Não</span>
+                    <span class="legenda-item"><span class="legenda-dot ld-mes-anterior"></span> 🟡 Mês Anterior</span>
+                    <span class="legenda-item"><span class="legenda-dot ld-repetente"></span> 🔴 Sim</span>
+                    <span class="legenda-item"><span class="legenda-dot ld-pendente"></span> 🟠 Pendente próximo mês</span>
+                </div>
                 <div class="month-tabs" id="ctrlMonthTabs"><div class="month-tab active" onclick="filtrarCtrlMes('todos')">📋 Todos</div></div>
-                <div class="filter-bar"><select id="ctrlFiltroMed" onchange="aplicarFiltrosCtrl()"><option value="todos">Todos</option></select><input type="text" id="ctrlFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosCtrl()"><span id="ctrlResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
-                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Qtd</th><th>Responsável</th><th>Repetente</th></tr></thead><tbody id="ctrlTabela"><tr><td colspan="6" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
+                <div class="filter-bar">
+                    <select id="ctrlFiltroMed" onchange="aplicarFiltrosCtrl()"><option value="todos">Todos</option></select>
+                    <input type="text" id="ctrlFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosCtrl()">
+                    <span id="ctrlResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Qtd</th><th>Responsável</th><th>Repetente</th><th>Obs</th></tr></thead>
+                        <tbody id="ctrlTabela"><tr><td colspan="7" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody>
+                    </table>
+                </div>
                 <h3 class="section-title">📈 Contagem - <span id="ctrlTituloContagem"></span></h3>
                 <div class="table-wrapper"><table><thead><tr><th>Medicamento</th><th>Qtd Total</th><th>Pacientes</th><th>Alertas</th></tr></thead><tbody id="ctrlTabelaContagem"><tr><td colspan="4" style="text-align:center;padding:30px;">Selecione um mês</td></tr></tbody></table></div>
             </div>
@@ -113,7 +119,15 @@
                         <div class="form-group"><label>💉 Medicamento *</label><select id="espMedicamento" required onchange="atualizarEstoqueDisponivel()"><option value="">Selecione</option></select></div>
                         <div class="form-group"><label>📦 Ampolas *</label><input type="number" id="espAmpolas" min="1" placeholder="Ex: 3" required oninput="atualizarEstoqueDisponivel()"></div>
                         <div class="form-group"><label>👨‍⚕️ Prescritor *</label><input type="text" id="espPrescritor" placeholder="Nome do médico" required></div>
-                        <div class="form-group"><label>🔄 Amp/Ciclo</label><input type="number" id="espAmpolasCiclo" min="1" placeholder="Ex: 10"></div>
+                        <div class="form-group"><label>🔄 Ciclo atual</label>
+                            <select id="espCicloAtual">
+                                <option value="">Selecione</option>
+                                <option value="1">1º</option><option value="2">2º</option><option value="3">3º</option>
+                                <option value="4">4º</option><option value="5">5º</option><option value="6">6º</option>
+                                <option value="7">7º</option><option value="8">8º</option><option value="9">9º</option>
+                                <option value="10">10º</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>🔁 Ciclos EV</label><input type="number" id="espCiclosEV" min="1" placeholder="Ex: 3"></div>
                         <div class="form-group"><label>📋 Estoque</label><input type="text" id="espEstoqueDisponivel" readonly value="Selecione o medicamento"></div>
                     </div>
@@ -127,93 +141,22 @@
                 </div>
                 <h3 class="section-title">📂 Histórico</h3>
                 <div class="month-tabs" id="espMonthTabs"><div class="month-tab active" onclick="filtrarEspMes('todos')">📋 Todos</div></div>
-                <div class="filter-bar"><select id="espFiltroMed" onchange="aplicarFiltrosEsp()"><option value="todos">Todos</option></select><input type="text" id="espFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosEsp()"><span id="espResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span></div>
-                <div class="table-wrapper"><table><thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Amp</th><th>Prescritor</th><th>A/C</th><th>EV</th></tr></thead><tbody id="espTabela"><tr><td colspan="7" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody></table></div>
-            </div>
-            
-            <!-- MÓDULO DIABETES -->
-            <div class="modulo" id="modulo-diabetes">
-                <!-- Dashboard -->
-                <div class="dashboard-header">
-                    <h2>📊 Dashboard - Diabetes</h2>
-                    <div class="mes-selector">
-                        <label>📅 Mês:</label>
-                        <select id="dashboardMesDiabetes" onchange="atualizarDashboardDiabetes()">
-                            <option value="atual">Mês Atual</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-card"><h3>📅 Dispensações</h3><div class="number" id="diabetesTotal">0</div><small id="diabetesMesLabel">Mês atual</small></div>
-                    <div class="stat-card"><h3>🩸 Pacientes</h3><div class="number" id="diabetesPacientes">0</div><small>atendidos</small></div>
-                    <div class="stat-card"><h3>📦 Itens</h3><div class="number" id="diabetesItens">0</div><small>dispensados</small></div>
-                    <div class="stat-card"><h3>🔄 Fila</h3><div class="number" id="diabetesFila">0</div><small>pendentes</small></div>
-                </div>
-
-                <!-- Cadastro de Paciente -->
-                <div class="form-section">
-                    <h2>👤 Cadastrar Paciente</h2>
-                    <div class="form-grid">
-                        <div class="form-group"><label>Nome *</label><input type="text" id="diabPacNome" placeholder="Nome completo" required></div>
-                        <div class="form-group"><label>Data de Nascimento *</label><input type="date" id="diabPacNasc" required></div>
-                        <div class="form-group"><label>ACS</label><input type="text" id="diabPacACS" placeholder="Agente de Saúde"></div>
-                        <div class="form-group"><label>Telefone</label><input type="tel" id="diabPacTel" placeholder="(XX) XXXX-XXXX"></div>
-                        <div class="form-group"><label>UBS</label><input type="text" id="diabPacUBS" placeholder="Unidade Básica"></div>
-                    </div>
-                    <button class="btn btn-primary" onclick="cadastrarPaciente()">💾 Salvar Paciente</button>
-                </div>
-
-                <!-- Dispensação Diabetes -->
-                <div class="form-section">
-                    <h2>📝 Nova Dispensação - Diabetes</h2>
-                    <div class="form-grid">
-                        <div class="form-group"><label>📅 Data *</label><input type="date" id="diabetesData" required></div>
-                        <div class="form-group">
-                            <label>👤 Paciente *</label>
-                            <input type="text" id="diabetesPaciente" placeholder="Digite o nome" list="listaPacientesDiabetes" required autocomplete="off">
-                            <datalist id="listaPacientesDiabetes"></datalist>
-                        </div>
-                        <div class="form-group"><label>📦 Tipo *</label>
-                            <select id="diabetesTipo" required onchange="atualizarItensDiabetes()">
-                                <option value="">Selecione</option>
-                                <option value="Canetas">Canetas</option>
-                                <option value="Refis">Refis</option>
-                                <option value="Insumos">Insumos</option>
-                            </select>
-                        </div>
-                        <div class="form-group"><label>🛒 Item *</label>
-                            <select id="diabetesItem" required><option value="">Selecione primeiro o Tipo</option></select>
-                        </div>
-                        <div class="form-group"><label>🔢 Quantidade *</label><input type="number" id="diabetesQuantidade" min="1" placeholder="Ex: 2" required></div>
-                        <div class="form-group"><label>📝 Observação</label><input type="text" id="diabetesObs" placeholder="Opcional"></div>
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn btn-dia" onclick="registrarDiabetes()">🩸 Registrar</button>
-                        <button class="btn btn-success" onclick="sincronizarTudo()">🔄 Sincronizar</button>
-                    </div>
-                    <div class="sync-info" id="syncInfoDiabetes">🔄 Google Sheets API</div>
-                </div>
-
-                <h3 class="section-title">📂 Histórico - Diabetes</h3>
-                <div class="month-tabs" id="diabetesMonthTabs">
-                    <div class="month-tab active" onclick="filtrarDiabetesMes('todos')">📋 Todos</div>
-                </div>
                 <div class="filter-bar">
-                    <select id="diabetesFiltroTipo" onchange="aplicarFiltrosDiabetes()">
-                        <option value="todos">Todos os Tipos</option>
-                        <option value="Canetas">Canetas</option>
-                        <option value="Refis">Refis</option>
-                        <option value="Insumos">Insumos</option>
-                    </select>
-                    <input type="text" id="diabetesFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosDiabetes()">
-                    <span id="diabetesResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
+                    <select id="espFiltroMed" onchange="aplicarFiltrosEsp()"><option value="todos">Todos</option></select>
+                    <input type="text" id="espFiltroPaciente" placeholder="Buscar paciente..." onkeyup="aplicarFiltrosEsp()">
+                    <span id="espResultCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
                 </div>
                 <div class="table-wrapper">
                     <table>
-                        <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Item</th><th>Qtd</th><th>Obs</th></tr></thead>
-                        <tbody id="diabetesTabela"><tr><td colspan="6" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Medicamento</th><th>Amp</th><th>Prescritor</th><th>Ciclo atual</th><th>EV</th></tr></thead>
+                        <tbody id="espTabela"><tr><td colspan="7" style="text-align:center;padding:30px;">Carregando...</td></tr></tbody>
                     </table>
                 </div>
+            </div>
+            
+            <!-- MÓDULO DIABETES (criado dinamicamente pelo script) -->
+            <div class="modulo" id="modulo-diabetes">
+                <!-- O conteúdo será gerado pelo JavaScript -->
             </div>
         </div>
         
@@ -244,6 +187,8 @@
                 <div class="config-tab" onclick="trocarConfigTab('limites')">📊 Limites</div>
                 <div class="config-tab" onclick="trocarConfigTab('backup')">💾 Backup</div>
                 <div class="config-tab" onclick="trocarConfigTab('sobre')">ℹ️ Sobre</div>
+                <div class="config-tab" onclick="trocarConfigTab('estoque')">📦 Estoque</div>
+                <div class="config-tab" onclick="trocarConfigTab('diabetes-opcoes')">🩸 Diabetes</div>
             </div>
             <div class="config-panel active" id="configPanel-medicamentos">
                 <div class="config-section"><h4>💊 Controlados</h4><textarea id="cfgMedsCtrl" rows="10" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea></div>
@@ -261,6 +206,27 @@
             </div>
             <div class="config-panel" id="configPanel-sobre">
                 <div class="config-section"><h4>ℹ️ Sobre</h4><p style="font-size:0.85em;line-height:1.6;"><strong>Assistência Farmacêutica</strong><br>Campo do Tenente - PR<br><br><strong>Versão:</strong> <span id="configVersaoSobre"></span><br><strong>Módulos:</strong> Controlados + Especiais + Diabetes<br><strong>Conexão:</strong> Google Sheets API<br><br>✅ Registro de dispensações<br>✅ Detecção de repetentes<br>✅ Controle de estoque<br>✅ Dashboard mensal<br>✅ Exportação CSV<br>✅ Painel de configurações</p></div>
+            </div>
+            <div class="config-panel" id="configPanel-estoque">
+                <div class="config-section">
+                    <h4>💊 Medicamentos com Estoque Baixo (Controlados)</h4>
+                    <p class="config-info">Liste um medicamento por linha. Ao dispensar, será marcado como "Pendente próximo mês".</p>
+                    <textarea id="cfgEstoqueBaixoCtrl" rows="6" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+                    <button class="btn btn-primary btn-sm" onclick="salvarConfigEstoqueBaixo()">💾 Salvar</button>
+                </div>
+            </div>
+            <div class="config-panel" id="configPanel-diabetes-opcoes">
+                <div class="config-section">
+                    <h4>👥 Opções de ACS</h4>
+                    <p class="config-info">Liste um ACS por linha. Serão usados nos cadastros e dispensações.</p>
+                    <textarea id="cfgAcsOptions" rows="4" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+                </div>
+                <div class="config-section">
+                    <h4>🏥 Opções de UBS</h4>
+                    <p class="config-info">Liste uma UBS por linha.</p>
+                    <textarea id="cfgUbsOptions" rows="4" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="salvarConfigDiabetesOpcoes()">💾 Salvar</button>
             </div>
             <div style="margin-top:15px;text-align:right;"><button class="btn" onclick="fecharModal('modalConfig')" style="background:#a0aec0;color:white;">Fechar</button></div>
         </div>
