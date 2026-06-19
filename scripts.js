@@ -152,11 +152,12 @@ function fData(s){if(!s)return'';try{const p=s.split('-');if(p.length===3)return
 
 // ============ 🆕 PACIENTES (CADASTRO CENTRAL) ============
 function carregarSelectPacientesCtrl() {
-    const selectCtrl = document.getElementById('ctrlPacienteSelect');
-    const selectEsp = document.getElementById('espPacienteSelect');
-    const opts = pacientes.map(p => `<option value="${p.nome}">${p.nome}</option>`).join('');
-    if (selectCtrl) selectCtrl.innerHTML = '<option value="">Digite ou selecione</option>' + opts;
-    if (selectEsp) selectEsp.innerHTML = '<option value="">Digite ou selecione</option>' + opts;
+    const listaCtrl = document.getElementById('listaPacientesCtrl');
+    const listaEsp = document.getElementById('listaPacientesEsp');
+    const opts = pacientes.map(p => `<option value="${p.nome}">${p.nome} - ${p.ubs || 'Sem UBS'}</option>`).join('');
+    
+    if (listaCtrl) listaCtrl.innerHTML = opts;
+    if (listaEsp) listaEsp.innerHTML = opts;
 }
 
 // ============ STATUS + NAVEGAÇÃO ============
