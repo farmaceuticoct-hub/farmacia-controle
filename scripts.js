@@ -1,7 +1,7 @@
 /*
- * Arquivo: scripts.js - v3.0.0
+ * Arquivo: scripts.js - v3.0.1
  * Sistema: Assistência Farmacêutica - Controlados, Especiais e Diabetes
- * Atualização: Adicionado módulo Diabetes com cadastro de pacientes e dispensações
+ * Atualização: Corrigido erro de null em elementos da aba Diabetes
  * Data: 2025-03-19
  */
 
@@ -11,7 +11,7 @@ const SHEET_ID_PACIENTES = '14JGqndfKqh3kVvzMJBqa13XO6z_SpXnoGTUJ-ZWtIdI';
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const SHEET_ID_DIABETES = '1POcsyqGHIN908kgiE_be3oyz9ILBntiSv7hn7iyXJt4';
-const VERSAO = '3.0.0';
+const VERSAO = '3.0.1';
 
 const MEDICAMENTOS_CTRL = [
   "Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg",
@@ -68,10 +68,14 @@ function inicializar(){
     carregarDashboardEsp();
     carregarDashboardDiabetes();
     carregarSelectPacientesTodos();
-    document.getElementById('ctrlData').valueAsDate=new Date();
-    document.getElementById('espData').valueAsDate=new Date();
-    document.getElementById('diabetesData').valueAsDate=new Date();
-    document.getElementById('ctrlTituloContagem').textContent=MESES[new Date().getMonth()];
+    const ctrlData = document.getElementById('ctrlData');
+    const espData = document.getElementById('espData');
+    const diabData = document.getElementById('diabetesData');
+    if (ctrlData) ctrlData.valueAsDate = new Date();
+    if (espData) espData.valueAsDate = new Date();
+    if (diabData) diabData.valueAsDate = new Date();
+    const titulo = document.getElementById('ctrlTituloContagem');
+    if (titulo) titulo.textContent = MESES[new Date().getMonth()];
     atualizarModuloControlados();
     atualizarModuloEspeciais();
     atualizarModuloDiabetes();
@@ -96,17 +100,22 @@ function criarAbaDiabetes() {
 
     // 1. Adicionar guia no menu
     const navTabs = document.querySelector('.nav-tabs');
-    if (navTabs) {
-        const tab = document.createElement('div');
-        tab.className = 'nav-tab';
-        tab.setAttribute('onclick', "trocarModulo('diabetes')");
-        tab.innerHTML = '🩸 Diabetes <span class="nav-tab-badge">Novo</span>';
-        navTabs.appendChild(tab);
+    if (!navTabs) {
+        console.warn('Nav-tabs não encontrado');
+        return;
     }
+    const tab = document.createElement('div');
+    tab.className = 'nav-tab';
+    tab.setAttribute('onclick', "trocarModulo('diabetes')");
+    tab.innerHTML = '🩸 Diabetes <span class="nav-tab-badge">Novo</span>';
+    navTabs.appendChild(tab);
 
     // 2. Criar o conteúdo do módulo
     const content = document.querySelector('.content');
-    if (!content) return;
+    if (!content) {
+        console.warn('Content não encontrado');
+        return;
+    }
 
     const modulo = document.createElement('div');
     modulo.className = 'modulo';
@@ -198,12 +207,15 @@ function criarAbaDiabetes() {
     content.appendChild(modulo);
 
     // Ajusta o estilo do botão de diabetes (cor)
-    const style = document.createElement('style');
-    style.textContent = `
-        .btn-dia { background: linear-gradient(135deg, #00b894, #00b894); color: white; }
-        .btn-dia:hover { background: #00a381; transform: scale(1.02); }
-    `;
-    document.head.appendChild(style);
+    if (!document.getElementById('estiloDiabetes')) {
+        const style = document.createElement('style');
+        style.id = 'estiloDiabetes';
+        style.textContent = `
+            .btn-dia { background: linear-gradient(135deg, #00b894, #00b894); color: white; }
+            .btn-dia:hover { background: #00a381; transform: scale(1.02); }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 // ============ FUNÇÕES DE TROCA DE MÓDULO (sobrescreve a original para incluir diabetes) ============
@@ -215,16 +227,20 @@ window.trocarModulo = function(modulo) {
     document.querySelectorAll('.modulo').forEach(m => m.classList.remove('active'));
     
     if (modulo === 'controlados') {
-        document.querySelector('.nav-tab:nth-child(1)').classList.add('active');
-        document.getElementById('modulo-controlados').classList.add('active');
+        const tabs = document.querySelectorAll('.nav-tab');
+        if (tabs.length >= 1) tabs[0].classList.add('active');
+        const mod = document.getElementById('modulo-controlados');
+        if (mod) mod.classList.add('active');
     } else if (modulo === 'especiais') {
-        document.querySelector('.nav-tab:nth-child(2)').classList.add('active');
-        document.getElementById('modulo-especiais').classList.add('active');
+        const tabs = document.querySelectorAll('.nav-tab');
+        if (tabs.length >= 2) tabs[1].classList.add('active');
+        const mod = document.getElementById('modulo-especiais');
+        if (mod) mod.classList.add('active');
     } else if (modulo === 'diabetes') {
-        // A aba Diabetes pode ser a terceira (se existir)
         const tabs = document.querySelectorAll('.nav-tab');
         if (tabs.length >= 3) tabs[2].classList.add('active');
-        document.getElementById('modulo-diabetes').classList.add('active');
+        const mod = document.getElementById('modulo-diabetes');
+        if (mod) mod.classList.add('active');
     }
 };
 
@@ -410,22 +426,21 @@ async function cadastrarPaciente() {
 
 // ============ DIABETES ============
 function carregarSelectsDiabetes() {
-    // Itens
-    atualizarItensDiabetes();
-    // Filtro de tipo
-    const sel = document.getElementById('diabetesFiltroTipo');
-    if (sel) {
-        sel.innerHTML = `<option value="todos">Todos os Tipos</option>
-                         <option value="Canetas">Canetas</option>
-                         <option value="Refis">Refis</option>
-                         <option value="Insumos">Insumos</option>`;
+    const selFiltro = document.getElementById('diabetesFiltroTipo');
+    if (selFiltro) {
+        selFiltro.innerHTML = `<option value="todos">Todos os Tipos</option>
+                               <option value="Canetas">Canetas</option>
+                               <option value="Refis">Refis</option>
+                               <option value="Insumos">Insumos</option>`;
     }
+    atualizarItensDiabetes();
 }
 
 function atualizarItensDiabetes() {
-    const tipo = document.getElementById('diabetesTipo').value;
+    const tipoEl = document.getElementById('diabetesTipo');
     const sel = document.getElementById('diabetesItem');
-    if (!sel) return;
+    if (!tipoEl || !sel) return; // Elementos ainda não existem
+    const tipo = tipoEl.value;
     if (!tipo) {
         sel.innerHTML = '<option value="">Selecione primeiro o Tipo</option>';
         return;
@@ -467,16 +482,20 @@ function atualizarDashboardDiabetes() {
         const [a, me] = v.split('-').map(Number);
         mf = me; af = a; nm = MESES[me];
     }
-    document.getElementById('diabetesMesLabel').textContent = `${nm} de ${af}`;
+    const mesLabel = document.getElementById('diabetesMesLabel');
+    if (mesLabel) mesLabel.textContent = `${nm} de ${af}`;
     
     const rf = registrosDiabetes.filter(r => {
         if (!r.data) return false;
         const p = r.data.split('-');
         return p.length >= 2 && parseInt(p[1])-1 === mf && parseInt(p[0]) === af;
     });
-    document.getElementById('diabetesTotal').textContent = rf.length;
-    document.getElementById('diabetesPacientes').textContent = new Set(rf.map(r => r.paciente.toLowerCase())).size;
-    document.getElementById('diabetesItens').textContent = rf.reduce((acc, r) => acc + r.quantidade, 0);
+    const totalEl = document.getElementById('diabetesTotal');
+    if (totalEl) totalEl.textContent = rf.length;
+    const pacEl = document.getElementById('diabetesPacientes');
+    if (pacEl) pacEl.textContent = new Set(rf.map(r => r.paciente.toLowerCase())).size;
+    const itensEl = document.getElementById('diabetesItens');
+    if (itensEl) itensEl.textContent = rf.reduce((acc, r) => acc + r.quantidade, 0);
     atualizarContadorFila();
 }
 
@@ -506,11 +525,7 @@ async function registrarDiabetes() {
 
     if (navigator.onLine) {
         try {
-            // Primeiro, precisamos saber a última linha para anexar (ou usar a API com append)
-            // A função escreverPlanilha espera um range específico; podemos usar a mesma lógica de append.
-            // Vamos ler a planilha atual, adicionar a linha e escrever de volta.
-            // Mas para simplificar, vamos usar o mesmo range e sobrescrever tudo? Não, melhor append.
-            // Como a API atual não tem append, vamos ler todo o conteúdo, adicionar e escrever de volta.
+            // Lê os dados existentes e adiciona a nova linha
             const dadosExistentes = await lerPlanilha(SHEET_ID_DIABETES, range);
             const novasLinhas = dadosExistentes.concat([valores]);
             await escreverPlanilha(SHEET_ID_DIABETES, range, novasLinhas);
@@ -527,10 +542,12 @@ async function registrarDiabetes() {
     // Limpar campos
     document.getElementById('diabetesPaciente').value = '';
     document.getElementById('diabetesTipo').value = '';
-    document.getElementById('diabetesItem').innerHTML = '<option value="">Selecione primeiro o Tipo</option>';
+    const selItem = document.getElementById('diabetesItem');
+    if (selItem) selItem.innerHTML = '<option value="">Selecione primeiro o Tipo</option>';
     document.getElementById('diabetesQuantidade').value = '';
     document.getElementById('diabetesObs').value = '';
-    document.getElementById('diabetesData').valueAsDate = new Date();
+    const dataEl = document.getElementById('diabetesData');
+    if (dataEl) dataEl.valueAsDate = new Date();
 
     // Atualizar dashboards e tabelas
     carregarDashboardDiabetes();
@@ -543,8 +560,11 @@ function filtrarDiabetesMes(mes) {
 }
 
 function aplicarFiltrosDiabetes() {
-    const filtroTipo = document.getElementById('diabetesFiltroTipo').value;
-    const filtroPaciente = document.getElementById('diabetesFiltroPaciente').value.toLowerCase();
+    const filtroTipo = document.getElementById('diabetesFiltroTipo');
+    const filtroPaciente = document.getElementById('diabetesFiltroPaciente');
+    if (!filtroTipo || !filtroPaciente) return;
+    const tipo = filtroTipo.value;
+    const paciente = filtroPaciente.value.toLowerCase();
     let dados = [...registrosDiabetes];
     
     if (mesDiabetes !== 'todos') {
@@ -554,8 +574,8 @@ function aplicarFiltrosDiabetes() {
             return p.length >= 2 && MESES[parseInt(p[1])-1] === mesDiabetes;
         });
     }
-    if (filtroTipo !== 'todos') dados = dados.filter(r => r.tipo === filtroTipo);
-    if (filtroPaciente) dados = dados.filter(r => r.paciente.toLowerCase().includes(filtroPaciente));
+    if (tipo !== 'todos') dados = dados.filter(r => r.tipo === tipo);
+    if (paciente) dados = dados.filter(r => r.paciente.toLowerCase().includes(paciente));
     
     dados.sort((a,b) => (b.data||'').localeCompare(a.data||''));
     
@@ -575,7 +595,8 @@ function aplicarFiltrosDiabetes() {
             <td>${r.obs || '-'}</td>
         </tr>
     `).join('');
-    document.getElementById('diabetesResultCount').textContent = `${dados.length} registros`;
+    const count = document.getElementById('diabetesResultCount');
+    if (count) count.textContent = `${dados.length} registros`;
 }
 
 function atualizarModuloDiabetes() {
@@ -611,9 +632,12 @@ function atualizarModuloDiabetes() {
 
 // ============ CONTROLADOS (código original com pequenas adaptações) ============
 function carregarSelectsCtrl(){
-    document.getElementById('ctrlMedicamento').innerHTML='<option value="">Selecione</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
-    document.getElementById('ctrlFiltroMed').innerHTML='<option value="todos">Todos</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
-    document.getElementById('ctrlResponsavel').innerHTML='<option value="">Selecione</option>'+responsaveisAtivos.map(r=>`<option value="${r}">${r}</option>`).join('');
+    const med = document.getElementById('ctrlMedicamento');
+    const filtro = document.getElementById('ctrlFiltroMed');
+    const resp = document.getElementById('ctrlResponsavel');
+    if (med) med.innerHTML='<option value="">Selecione</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if (filtro) filtro.innerHTML='<option value="todos">Todos</option>'+medicamentosAtivosCtrl.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if (resp) resp.innerHTML='<option value="">Selecione</option>'+responsaveisAtivos.map(r=>`<option value="${r}">${r}</option>`).join('');
 }
 function carregarDashboardCtrl(){
     const s=document.getElementById('dashboardMesControlados'); if(!s) return;
@@ -658,9 +682,14 @@ async function registrarControlado(){
         mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`,'info');
     }
     
-    ['ctrlPaciente','ctrlMedicamento','ctrlQuantidade','ctrlResponsavel'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('ctrlRepetente').value='Preencha os campos';document.getElementById('ctrlRepetente').style.cssText='';
-    document.getElementById('ctrlData').valueAsDate=new Date();
+    ['ctrlPaciente','ctrlMedicamento','ctrlQuantidade','ctrlResponsavel'].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const repEl = document.getElementById('ctrlRepetente');
+    if (repEl) { repEl.value='Preencha os campos'; repEl.style.cssText=''; }
+    const dataEl = document.getElementById('ctrlData');
+    if (dataEl) dataEl.valueAsDate = new Date();
     const ds=document.getElementById('dashboardMesControlados');if(ds&&ds.value!=='atual'){dashboardMesCtrl=ds.value;localStorage.setItem('dashboard_mes_344',dashboardMesCtrl);}
     carregarDashboardCtrl();atualizarModuloControlados();
 }
@@ -669,25 +698,43 @@ function atualizarDashboardControlados(){
     const v=s.value;
     if(v!=='atual'){dashboardMesCtrl=v;localStorage.setItem('dashboard_mes_344',dashboardMesCtrl);}else{dashboardMesCtrl=null;localStorage.removeItem('dashboard_mes_344');}
     let mf,af,nm;if(v==='atual'){const h=new Date();mf=h.getMonth();af=h.getFullYear();nm=MESES[mf];}else{const[a,me]=v.split('-').map(Number);mf=me;af=a;nm=MESES[me];}
-    document.getElementById('ctrlMesLabel').textContent=`${nm} de ${af}`;
+    const mesLabel = document.getElementById('ctrlMesLabel');
+    if (mesLabel) mesLabel.textContent=`${nm} de ${af}`;
     const rf=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
-    document.getElementById('ctrlTotal').textContent=rf.length;document.getElementById('ctrlRepetentes').textContent=rf.filter(r=>r.repetente==='Sim').length;
-    document.getElementById('ctrlPacientes').textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;document.getElementById('ctrlMeds').textContent=new Set(rf.map(r=>r.medicamento)).size;
+    const totalEl = document.getElementById('ctrlTotal');
+    if (totalEl) totalEl.textContent=rf.length;
+    const repEl = document.getElementById('ctrlRepetentes');
+    if (repEl) repEl.textContent=rf.filter(r=>r.repetente==='Sim').length;
+    const pacEl = document.getElementById('ctrlPacientes');
+    if (pacEl) pacEl.textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;
+    const medEl = document.getElementById('ctrlMeds');
+    if (medEl) medEl.textContent=new Set(rf.map(r=>r.medicamento)).size;
 }
 function filtrarCtrlMes(m){mesCtrl=m;atualizarModuloControlados();}
 function aplicarFiltrosCtrl(){
-    const fm=document.getElementById('ctrlFiltroMed').value,fp=document.getElementById('ctrlFiltroPaciente').value.toLowerCase();let d=[...registrosCtrl];
+    const fm=document.getElementById('ctrlFiltroMed');
+    const fp=document.getElementById('ctrlFiltroPaciente');
+    if (!fm || !fp) return;
+    const filtroMed = fm.value;
+    const filtroPac = fp.value.toLowerCase();
+    let d=[...registrosCtrl];
     if(mesCtrl!=='todos')d=d.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&MESES[parseInt(p[1])-1]===mesCtrl;});
-    if(fm!=='todos')d=d.filter(r=>r.medicamento===fm);if(fp)d=d.filter(r=>r.paciente.toLowerCase().includes(fp));
+    if(filtroMed!=='todos')d=d.filter(r=>r.medicamento===filtroMed);
+    if(filtroPac)d=d.filter(r=>r.paciente.toLowerCase().includes(filtroPac));
     d.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
-    const tb=document.getElementById('ctrlTabela');if(d.length===0){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
+    const tb=document.getElementById('ctrlTabela');
+    if(!tb) return;
+    if(d.length===0){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
     tb.innerHTML=d.map(r=>{let bc='badge-ok',bt='✅ Não';if(r.repetente==='Sim'){bc='badge-alert';bt='🔴 Sim';}else if(r.repetente==='Mês Anterior'){bc='badge-mes-anterior';bt='🟡 Mês Ant.';}return`<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.quantidade}</td><td>${r.responsavel}</td><td><span class="badge ${bc}">${bt}</span></td></tr>`;}).join('');}
 function atualizarContagemCtrl(){
     const ma=new Date().getMonth(),aa=new Date().getFullYear();let mf=ma,af=aa;if(mesCtrl!=='todos'){mf=MESES.indexOf(mesCtrl);if(mf<0)mf=ma;}
     const rm=registrosCtrl.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
-    document.getElementById('ctrlTituloContagem').textContent=mesCtrl!=='todos'?mesCtrl:MESES[ma];
+    const titulo = document.getElementById('ctrlTituloContagem');
+    if (titulo) titulo.textContent=mesCtrl!=='todos'?mesCtrl:MESES[ma];
     const ct={};rm.forEach(r=>{if(!ct[r.medicamento])ct[r.medicamento]={q:0,p:new Set(),a:0};ct[r.medicamento].q+=r.quantidade;ct[r.medicamento].p.add(r.paciente.toLowerCase());if(r.repetente!=='Não')ct[r.medicamento].a++;});
-    const tb=document.getElementById('ctrlTabelaContagem');if(Object.keys(ct).length===0){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum dado</td></tr>';return;}
+    const tb=document.getElementById('ctrlTabelaContagem');
+    if(!tb) return;
+    if(Object.keys(ct).length===0){tb.innerHTML='<tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum dado</td></tr>';return;}
     tb.innerHTML=Object.entries(ct).sort((a,b)=>b[1].q-a[1].q).map(([m,d])=>`<tr><td><strong>${m}</strong></td><td>${d.q.toFixed(2)}</td><td>${d.p.size}</td><td>${d.a>0?`<span class="badge badge-alert">⚠️ ${d.a}</span>`:'-'}</td></tr>`).join('');}
 function atualizarModuloControlados(){carregarDashboardCtrl();carregarSelectsCtrl();carregarSelectPacientesTodos();
     const tc=document.getElementById('ctrlMonthTabs');if(!tc)return;tc.innerHTML=`<div class="month-tab ${mesCtrl==='todos'?'active':''}" onclick="filtrarCtrlMes('todos')">📋 Todos</div>`;
@@ -700,7 +747,9 @@ function exportarCSVCtrl(){if(registrosCtrl.length===0)return mostrarStatus('⚠
 function carregarSelectsEsp(){
     const sm=document.getElementById('espMedicamento'),sf=document.getElementById('espFiltroMed'),se=document.getElementById('entradaMedicamento');
     const opts=MEDICAMENTOS_ESP.map(m=>`<option value="${m}">${m}</option>`).join('');
-    sm.innerHTML='<option value="">Selecione</option>'+opts;sf.innerHTML='<option value="todos">Todos</option>'+opts;se.innerHTML='<option value="">Selecione</option>'+opts;
+    if (sm) sm.innerHTML='<option value="">Selecione</option>'+opts;
+    if (sf) sf.innerHTML='<option value="todos">Todos</option>'+opts;
+    if (se) se.innerHTML='<option value="">Selecione</option>'+opts;
 }
 function carregarDashboardEsp(){
     const s=document.getElementById('dashboardMesEspeciais'); if(!s) return;
@@ -732,9 +781,16 @@ async function registrarEspecial(){
         catch(e){adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);mostrarStatus(`⚠️ Salvo localmente!`,'alerta');}
     } else {adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);mostrarStatus(`💾 Offline! Salvo localmente.`,'info');}
     
-    ['espPaciente','espAmpolas','espPrescritor','espAmpolasCiclo','espCiclosEV'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('espMedicamento').value='';document.getElementById('espEstoqueDisponivel').value='Selecione';document.getElementById('espEstoqueDisponivel').style.cssText='';
-    document.getElementById('espData').valueAsDate=new Date();
+    ['espPaciente','espAmpolas','espPrescritor','espAmpolasCiclo','espCiclosEV'].forEach(id=>{
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const medEl = document.getElementById('espMedicamento');
+    if (medEl) medEl.value = '';
+    const estEl = document.getElementById('espEstoqueDisponivel');
+    if (estEl) { estEl.value='Selecione'; estEl.style.cssText=''; }
+    const dataEl = document.getElementById('espData');
+    if (dataEl) dataEl.valueAsDate = new Date();
     const ds=document.getElementById('dashboardMesEspeciais');if(ds&&ds.value!=='atual'){dashboardMesEsp=ds.value;localStorage.setItem('dashboard_mes_esp',dashboardMesEsp);}
     carregarDashboardEsp();atualizarModuloEspeciais();
 }
@@ -752,10 +808,17 @@ function atualizarDashboardEspeciais(){
     const v=s.value;
     if(v!=='atual'){dashboardMesEsp=v;localStorage.setItem('dashboard_mes_esp',dashboardMesEsp);}else{dashboardMesEsp=null;localStorage.removeItem('dashboard_mes_esp');}
     let mf,af,nm;if(v==='atual'){const h=new Date();mf=h.getMonth();af=h.getFullYear();nm=MESES[mf];}else{const[a,me]=v.split('-').map(Number);mf=me;af=a;nm=MESES[me];}
-    document.getElementById('espMesLabel').textContent=`${nm} de ${af}`;
+    const mesLabel = document.getElementById('espMesLabel');
+    if (mesLabel) mesLabel.textContent=`${nm} de ${af}`;
     const rf=registrosEsp.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&parseInt(p[1])-1===mf&&parseInt(p[0])===af;});
-    document.getElementById('espTotal').textContent=rf.length;document.getElementById('espEstoqueFerro').textContent=estoque[MEDICAMENTOS_ESP[0]]||0;
-    document.getElementById('espEstoqueEnoxa').textContent=estoque[MEDICAMENTOS_ESP[1]]||0;document.getElementById('espPacientes').textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;
+    const totalEl = document.getElementById('espTotal');
+    if (totalEl) totalEl.textContent=rf.length;
+    const ferroEl = document.getElementById('espEstoqueFerro');
+    if (ferroEl) ferroEl.textContent=estoque[MEDICAMENTOS_ESP[0]]||0;
+    const enoxaEl = document.getElementById('espEstoqueEnoxa');
+    if (enoxaEl) enoxaEl.textContent=estoque[MEDICAMENTOS_ESP[1]]||0;
+    const pacEl = document.getElementById('espPacientes');
+    if (pacEl) pacEl.textContent=new Set(rf.map(r=>r.paciente.toLowerCase())).size;
 }
 function atualizarStatusEstoque(){
     const div=document.getElementById('estoqueStatus'); if(!div) return;
@@ -765,11 +828,19 @@ function atualizarStatusEstoque(){
         return`<div class="estoque-card ${cls}"><div><strong>${icone} ${m}</strong><br><small><strong>${q}</strong> unidades</small></div><span class="badge ${badge}">${status}</span></div>`;}).join('');}
 function filtrarEspMes(m){mesEsp=m;atualizarModuloEspeciais();}
 function aplicarFiltrosEsp(){
-    const fm=document.getElementById('espFiltroMed').value,fp=document.getElementById('espFiltroPaciente').value.toLowerCase();let d=[...registrosEsp];
+    const fm=document.getElementById('espFiltroMed');
+    const fp=document.getElementById('espFiltroPaciente');
+    if (!fm || !fp) return;
+    const filtroMed = fm.value;
+    const filtroPac = fp.value.toLowerCase();
+    let d=[...registrosEsp];
     if(mesEsp!=='todos')d=d.filter(r=>{if(!r.data)return false;const p=r.data.split('-');return p.length>=2&&MESES[parseInt(p[1])-1]===mesEsp;});
-    if(fm!=='todos')d=d.filter(r=>r.medicamento===fm);if(fp)d=d.filter(r=>r.paciente.toLowerCase().includes(fp));
+    if(filtroMed!=='todos')d=d.filter(r=>r.medicamento===filtroMed);
+    if(filtroPac)d=d.filter(r=>r.paciente.toLowerCase().includes(filtroPac));
     d.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
-    const tb=document.getElementById('espTabela');if(d.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
+    const tb=document.getElementById('espTabela');
+    if(!tb) return;
+    if(d.length===0){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum registro</td></tr>';return;}
     tb.innerHTML=d.map(r=>`<tr><td>${fData(r.data)}</td><td>${r.paciente}</td><td>${r.medicamento}</td><td>${r.ampolas}</td><td>${r.prescritor}</td><td>${r.ampolasCiclo||'-'}</td><td>${r.ciclosEV||'-'}</td></tr>`).join('');}
 function atualizarModuloEspeciais(){carregarDashboardEsp();carregarSelectsEsp();carregarSelectPacientesTodos();
     const tc=document.getElementById('espMonthTabs');if(!tc)return;tc.innerHTML=`<div class="month-tab ${mesEsp==='todos'?'active':''}" onclick="filtrarEspMes('todos')">📋 Todos</div>`;
