@@ -1,14 +1,14 @@
 /*
- * Arquivo: scripts.js - v3.2.0
+ * Arquivo: scripts.js - v3.3.0
  * Sistema: Assistência Farmacêutica - Controlados, Especiais e Diabetes
- * Novidades: estoque baixo (pendente próximo mês), ciclo atual (ordinais), opções ACS/UBS editáveis.
+ * Correções: Prevenção de duplicação, bloqueio de botão, backup manual.
  */
 const API_URL = 'https://farmacia-api-controlados.up.railway.app';
 const SHEET_ID_PACIENTES = '14JGqndfKqh3kVvzMJBqa13XO6z_SpXnoGTUJ-ZWtIdI';
 const SHEET_ID_CTRL = '1WIpoH1sZsuMCaSsD6QC6LAcDo-6Rc013MlGDztlzqRo';
 const SHEET_ID_ESP = '13oodt6jGo8TgAaxKqWUMS64a0y0TnPX5ZUmDXx3BL_M';
 const SHEET_ID_DIABETES = '1POcsyqGHIN908kgiE_be3oyz9ILBntiSv7hn7iyXJt4';
-const VERSAO = '3.2.0';
+const VERSAO = '3.3.0';
 
 const MEDICAMENTOS_CTRL = [
   "Amitriptilina 25mg","Amitriptilina 75mg","Biperideno 2mg","Carbamazepina 200mg","Carbonato de Lítio 300mg",
@@ -24,14 +24,13 @@ const MEDICAMENTOS_ESP = [
 const RESPONSAVEIS = ["Cinthia M.", "Daniel C.", "Luana Q.", "Marcos J."];
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
-// Itens de Diabetes (personalizáveis)
 const ITENS_DIABETES = {
     Canetas: ["Caneta de Insulina NPH", "Caneta de Insulina Rápida", "Caneta de Insulina Glargina"],
     Refis: ["Refil de Lanceta", "Refil de Fita Glicêmica"],
     Insumos: ["Algodão", "Álcool 70%", "Seringa 1mL", "Agulha 31G"]
 };
 
-// ============ VARIÁVEIS GLOBAIS ============
+// ============ VARIÁVEIS ============
 let pacientes = [];
 let registrosCtrl = [];
 let registrosEsp = [];
@@ -39,7 +38,6 @@ let estoque = {};
 let registrosDiabetes = { canetas: [], refis: [], insumos: [] };
 let limitesRefil = JSON.parse(localStorage.getItem('limites_refil') || '{}');
 
-// Configurações
 let medicamentosAtivosCtrl = [...MEDICAMENTOS_CTRL];
 let responsaveisAtivos = [...RESPONSAVEIS];
 let medicamentosEstoqueBaixo = JSON.parse(localStorage.getItem('meds_estoque_baixo') || '[]');
@@ -52,9 +50,14 @@ let cfgEstoqueCritico = parseInt(localStorage.getItem('cfg_estoque_critico') || 
 let cfgEstoqueBaixo = parseInt(localStorage.getItem('cfg_estoque_baixo') || '15', 10);
 let filaOffline = JSON.parse(localStorage.getItem('fila_offline') || '[]');
 
+// Controles de salvamento para evitar duplicação
+let salvandoControlado = false;
+let salvandoEspecial = false;
+let salvandoDiabetes = false;
+let salvandoPaciente = false;
+
 // ============ INICIALIZAÇÃO ============
 function inicializar() {
-    // Carrega dados do localStorage
     medicamentosAtivosCtrl = JSON.parse(localStorage.getItem('meds_344') || 'null') || [...MEDICAMENTOS_CTRL];
     responsaveisAtivos = JSON.parse(localStorage.getItem('resps_344') || 'null') || [...RESPONSAVEIS];
     pacientes = JSON.parse(localStorage.getItem('ctrl_pacientes') || '[]');
@@ -68,10 +71,7 @@ function inicializar() {
     dashboardMesEsp = localStorage.getItem('dashboard_mes_esp') || null;
     dashboardMesDiabetes = localStorage.getItem('dashboard_mes_diabetes') || null;
 
-    // Carrega opções de ACS/UBS
     carregarOpcoesDiabetes();
-
-    // Preenche selects e dashboards
     carregarSelectsCtrl();
     carregarSelectsEsp();
     carregarSelectsDiabetes();
@@ -80,7 +80,6 @@ function inicializar() {
     carregarDashboardDiabetes();
     carregarSelectPacientesTodos();
 
-    // Datas padrão
     const hoje = new Date();
     const ctrlData = document.getElementById('ctrlData');
     const espData = document.getElementById('espData');
@@ -97,7 +96,6 @@ function inicializar() {
     atualizarModuloDiabetes();
     sincronizarTudo();
 
-    // Eventos de conexão
     window.addEventListener('online', () => {
         mostrarStatus('🌐 Internet restaurada! Sincronizando...', 'info');
         processarFilaOffline();
@@ -107,7 +105,7 @@ function inicializar() {
     });
     if (navigator.onLine && filaOffline.length > 0) processarFilaOffline();
 
-    console.log(`🚀 v${VERSAO} - Sistema unificado com Diabetes + Estoque Baixo + ACS/UBS editáveis`);
+    console.log(`🚀 v${VERSAO} - Com prevenção de duplicação e backup`);
 }
 
 // ============ TROCA DE MÓDULO ============
@@ -195,7 +193,6 @@ async function sincronizarTudo() {
     if (st) st.textContent = 'Sincronizando...';
 
     try {
-        // 1. Pacientes
         const dp = await lerPlanilha(SHEET_ID_PACIENTES, 'Pacientes!A1:F1000');
         if (dp.length > 1) {
             pacientes = dp.slice(1).filter(r => r[1] && r[2]).map(r => ({
@@ -210,7 +207,6 @@ async function sincronizarTudo() {
         }
         carregarSelectPacientesTodos();
 
-        // 2. Controlados (incluindo campo pendente)
         const dc = await lerPlanilha(SHEET_ID_CTRL, 'Registros!A1:G1000');
         if (dc.length > 1) {
             registrosCtrl = dc.slice(1).filter(r => r.length >= 5 && r[1] && r[2]).map(r => ({
@@ -225,7 +221,6 @@ async function sincronizarTudo() {
             localStorage.setItem('registros_344', JSON.stringify(registrosCtrl));
         }
 
-        // 3. Especiais (com ciclo atual)
         try {
             const de = await lerPlanilha(SHEET_ID_ESP, 'Página1!A1:H1000');
             if (de.length > 1) {
@@ -243,7 +238,6 @@ async function sincronizarTudo() {
             }
         } catch (e) { console.log('Especiais:', e.message); }
 
-        // 4. Diabetes (Canetas, Refis, Insumos)
         registrosDiabetes.canetas = [];
         registrosDiabetes.refis = [];
         registrosDiabetes.insumos = [];
@@ -312,7 +306,7 @@ function fData(s) {
     return s;
 }
 
-// ============ PACIENTES (CADASTRO CENTRAL) ============
+// ============ PACIENTES ============
 function carregarSelectPacientesTodos() {
     const listas = ['listaPacientesCtrl', 'listaPacientesEsp', 'listaPacientesDiabetes'];
     const opts = pacientes.map(p => `<option value="${p.nome}">${p.nome} - ${p.ubs || 'Sem UBS'}</option>`).join('');
@@ -329,7 +323,7 @@ function carregarOpcoesDiabetes() {
     if (ubsList) ubsList.innerHTML = ubsOptions.map(o => `<option value="${o}">`).join('');
 }
 
-// ============ STATUS + NAVEGAÇÃO ============
+// ============ STATUS E NAVEGAÇÃO ============
 function mostrarStatus(m, tipo) {
     const s = document.getElementById('statusFlutuante');
     if (!s) return;
@@ -352,44 +346,57 @@ window.addEventListener('scroll', function() {
     }
 });
 
-// ============ CADASTRO DE PACIENTE (via Diabetes) ============
+// ============ CADASTRO DE PACIENTE ============
 async function cadastrarPaciente() {
-    const nome = document.getElementById('diabPacNome').value.trim();
-    const nasc = document.getElementById('diabPacNasc').value;
-    const acs = document.getElementById('diabPacACS').value.trim();
-    const tel = document.getElementById('diabPacTel').value.trim();
-    const ubs = document.getElementById('diabPacUBS').value.trim();
-
-    if (!nome || !nasc) {
-        mostrarStatus('⚠️ Nome e Nascimento são obrigatórios!', 'alerta');
+    if (salvandoPaciente) {
+        mostrarStatus('⏳ Aguarde, salvando paciente...', 'info');
         return;
     }
+    salvandoPaciente = true;
+    const btn = document.querySelector('#modulo-diabetes .form-section .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = '💾 Salvando...'; }
 
-    const id = 'P' + Date.now().toString(36).toUpperCase();
-    const valores = [id, nome, nasc, acs, tel, ubs];
+    try {
+        const nome = document.getElementById('diabPacNome').value.trim();
+        const nasc = document.getElementById('diabPacNasc').value;
+        const acs = document.getElementById('diabPacACS').value.trim();
+        const tel = document.getElementById('diabPacTel').value.trim();
+        const ubs = document.getElementById('diabPacUBS').value.trim();
 
-    pacientes.push({ id, nome, nascimento: nasc, acs, telefone: tel, ubs });
-    localStorage.setItem('ctrl_pacientes', JSON.stringify(pacientes));
-    carregarSelectPacientesTodos();
-
-    if (navigator.onLine) {
-        try {
-            await escreverPlanilha(SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
-            mostrarStatus(`✅ Paciente ${nome} cadastrado!`, 'sucesso');
-        } catch (e) {
-            adicionarFilaOffline('paciente', SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
-            mostrarStatus('💾 Salvo offline', 'info');
+        if (!nome || !nasc) {
+            mostrarStatus('⚠️ Nome e Nascimento são obrigatórios!', 'alerta');
+            return;
         }
-    } else {
-        adicionarFilaOffline('paciente', SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
-        mostrarStatus('💾 Offline! Salvo localmente.', 'info');
-    }
 
-    document.getElementById('diabPacNome').value = '';
-    document.getElementById('diabPacNasc').value = '';
-    document.getElementById('diabPacACS').value = '';
-    document.getElementById('diabPacTel').value = '';
-    document.getElementById('diabPacUBS').value = '';
+        const id = 'P' + Date.now().toString(36).toUpperCase();
+        const valores = [id, nome, nasc, acs, tel, ubs];
+
+        pacientes.push({ id, nome, nascimento: nasc, acs, telefone: tel, ubs });
+        localStorage.setItem('ctrl_pacientes', JSON.stringify(pacientes));
+        carregarSelectPacientesTodos();
+
+        if (navigator.onLine) {
+            try {
+                await escreverPlanilha(SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
+                mostrarStatus(`✅ Paciente ${nome} cadastrado!`, 'sucesso');
+            } catch (e) {
+                adicionarFilaOffline('paciente', SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
+                mostrarStatus('💾 Salvo offline', 'info');
+            }
+        } else {
+            adicionarFilaOffline('paciente', SHEET_ID_PACIENTES, 'Pacientes!A:F', valores);
+            mostrarStatus('💾 Offline! Salvo localmente.', 'info');
+        }
+
+        document.getElementById('diabPacNome').value = '';
+        document.getElementById('diabPacNasc').value = '';
+        document.getElementById('diabPacACS').value = '';
+        document.getElementById('diabPacTel').value = '';
+        document.getElementById('diabPacUBS').value = '';
+    } finally {
+        salvandoPaciente = false;
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Paciente'; }
+    }
 }
 
 // ============ DIABETES ============
@@ -484,85 +491,98 @@ function atualizarDashboardDiabetes() {
 }
 
 async function registrarDiabetes() {
-    const data = document.getElementById('diabetesData').value;
-    const paciente = document.getElementById('diabetesPaciente').value.trim();
-    const tipo = document.getElementById('diabetesTipo').value;
-    const item = document.getElementById('diabetesItem').value;
-    const qtd = parseInt(document.getElementById('diabetesQuantidade').value);
-    const obs = document.getElementById('diabetesObs').value.trim();
-
-    if (!data || !paciente || !tipo || !item || !qtd) {
-        mostrarStatus('⚠️ Preencha todos os campos obrigatórios!', 'alerta');
+    if (salvandoDiabetes) {
+        mostrarStatus('⏳ Aguarde, registrando...', 'info');
         return;
     }
-    if (qtd <= 0) {
-        mostrarStatus('⚠️ Quantidade inválida!', 'alerta');
-        return;
-    }
+    salvandoDiabetes = true;
+    const btn = document.querySelector('#modulo-diabetes .btn-dia');
+    if (btn) { btn.disabled = true; btn.textContent = '🩸 Salvando...'; }
 
-    let valores, range, destino;
-    if (tipo === 'Canetas') {
-        valores = [data, paciente, item, obs];
-        range = 'Canetas!A1:D1000';
-        destino = 'canetas';
-        registrosDiabetes.canetas.push({ data, paciente, lote: item, obs });
-        localStorage.setItem('diabetes_canetas', JSON.stringify(registrosDiabetes.canetas));
-    } else if (tipo === 'Refis') {
-        const limite = limitesRefil[paciente] || 3;
-        const hoje = new Date(data + 'T00:00:00');
-        const mesAtual = hoje.getMonth();
-        const anoAtual = hoje.getFullYear();
-        const retiradoEsteMes = registrosDiabetes.refis
-            .filter(r => r.paciente === paciente && r.data)
-            .filter(r => {
-                const d = new Date(r.data + 'T00:00:00');
-                return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
-            })
-            .reduce((s, r) => s + r.quantidade, 0);
-        if (retiradoEsteMes + qtd > limite) {
-            mostrarStatus(`⚠️ Limite excedido!\nLimite: ${limite} | Já retirado: ${retiradoEsteMes} | Tentando: ${qtd}`, 'alerta');
+    try {
+        const data = document.getElementById('diabetesData').value;
+        const paciente = document.getElementById('diabetesPaciente').value.trim();
+        const tipo = document.getElementById('diabetesTipo').value;
+        const item = document.getElementById('diabetesItem').value;
+        const qtd = parseInt(document.getElementById('diabetesQuantidade').value);
+        const obs = document.getElementById('diabetesObs').value.trim();
+
+        if (!data || !paciente || !tipo || !item || !qtd) {
+            mostrarStatus('⚠️ Preencha todos os campos obrigatórios!', 'alerta');
             return;
         }
-        valores = [data, paciente, qtd, limite];
-        range = 'Refis!A1:D1000';
-        destino = 'refis';
-        registrosDiabetes.refis.push({ data, paciente, quantidade: qtd, limite });
-        localStorage.setItem('diabetes_refis', JSON.stringify(registrosDiabetes.refis));
-    } else if (tipo === 'Insumos') {
-        valores = [data, paciente, item, qtd];
-        range = 'Insumos!A1:D1000';
-        destino = 'insumos';
-        registrosDiabetes.insumos.push({ data, paciente, tipo: item, quantidade: qtd });
-        localStorage.setItem('diabetes_insumos', JSON.stringify(registrosDiabetes.insumos));
-    } else {
-        mostrarStatus('⚠️ Tipo inválido!', 'alerta');
-        return;
-    }
-
-    if (navigator.onLine) {
-        try {
-            const dadosExistentes = await lerPlanilha(SHEET_ID_DIABETES, range);
-            const novasLinhas = dadosExistentes.concat([valores]);
-            await escreverPlanilha(SHEET_ID_DIABETES, range, novasLinhas);
-            mostrarStatus(`✅ ${tipo} registrado para ${paciente}!`, 'sucesso');
-        } catch (e) {
-            adicionarFilaOffline('diabetes', SHEET_ID_DIABETES, range, valores);
-            mostrarStatus('💾 Salvo offline', 'info');
+        if (qtd <= 0) {
+            mostrarStatus('⚠️ Quantidade inválida!', 'alerta');
+            return;
         }
-    } else {
-        adicionarFilaOffline('diabetes', SHEET_ID_DIABETES, range, valores);
-        mostrarStatus('💾 Offline! Salvo localmente.', 'info');
+
+        let valores, range, destino;
+        if (tipo === 'Canetas') {
+            valores = [data, paciente, item, obs];
+            range = 'Canetas!A1:D1000';
+            destino = 'canetas';
+            registrosDiabetes.canetas.push({ data, paciente, lote: item, obs });
+            localStorage.setItem('diabetes_canetas', JSON.stringify(registrosDiabetes.canetas));
+        } else if (tipo === 'Refis') {
+            const limite = limitesRefil[paciente] || 3;
+            const hoje = new Date(data + 'T00:00:00');
+            const mesAtual = hoje.getMonth();
+            const anoAtual = hoje.getFullYear();
+            const retiradoEsteMes = registrosDiabetes.refis
+                .filter(r => r.paciente === paciente && r.data)
+                .filter(r => {
+                    const d = new Date(r.data + 'T00:00:00');
+                    return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+                })
+                .reduce((s, r) => s + r.quantidade, 0);
+            if (retiradoEsteMes + qtd > limite) {
+                mostrarStatus(`⚠️ Limite excedido!\nLimite: ${limite} | Já retirado: ${retiradoEsteMes} | Tentando: ${qtd}`, 'alerta');
+                return;
+            }
+            valores = [data, paciente, qtd, limite];
+            range = 'Refis!A1:D1000';
+            destino = 'refis';
+            registrosDiabetes.refis.push({ data, paciente, quantidade: qtd, limite });
+            localStorage.setItem('diabetes_refis', JSON.stringify(registrosDiabetes.refis));
+        } else if (tipo === 'Insumos') {
+            valores = [data, paciente, item, qtd];
+            range = 'Insumos!A1:D1000';
+            destino = 'insumos';
+            registrosDiabetes.insumos.push({ data, paciente, tipo: item, quantidade: qtd });
+            localStorage.setItem('diabetes_insumos', JSON.stringify(registrosDiabetes.insumos));
+        } else {
+            mostrarStatus('⚠️ Tipo inválido!', 'alerta');
+            return;
+        }
+
+        if (navigator.onLine) {
+            try {
+                const dadosExistentes = await lerPlanilha(SHEET_ID_DIABETES, range);
+                const novasLinhas = dadosExistentes.concat([valores]);
+                await escreverPlanilha(SHEET_ID_DIABETES, range, novasLinhas);
+                mostrarStatus(`✅ ${tipo} registrado para ${paciente}!`, 'sucesso');
+            } catch (e) {
+                adicionarFilaOffline('diabetes', SHEET_ID_DIABETES, range, valores);
+                mostrarStatus('💾 Salvo offline', 'info');
+            }
+        } else {
+            adicionarFilaOffline('diabetes', SHEET_ID_DIABETES, range, valores);
+            mostrarStatus('💾 Offline! Salvo localmente.', 'info');
+        }
+
+        document.getElementById('diabetesPaciente').value = '';
+        document.getElementById('diabetesTipo').value = '';
+        document.getElementById('diabetesItem').innerHTML = '<option value="">Selecione primeiro o Tipo</option>';
+        document.getElementById('diabetesQuantidade').value = '';
+        document.getElementById('diabetesObs').value = '';
+        document.getElementById('diabetesData').valueAsDate = new Date();
+
+        carregarDashboardDiabetes();
+        atualizarModuloDiabetes();
+    } finally {
+        salvandoDiabetes = false;
+        if (btn) { btn.disabled = false; btn.textContent = '🩸 Registrar'; }
     }
-
-    document.getElementById('diabetesPaciente').value = '';
-    document.getElementById('diabetesTipo').value = '';
-    document.getElementById('diabetesItem').innerHTML = '<option value="">Selecione primeiro o Tipo</option>';
-    document.getElementById('diabetesQuantidade').value = '';
-    document.getElementById('diabetesObs').value = '';
-    document.getElementById('diabetesData').valueAsDate = new Date();
-
-    carregarDashboardDiabetes();
-    atualizarModuloDiabetes();
 }
 
 function filtrarDiabetesMes(mes) {
@@ -717,60 +737,78 @@ function verificarRepetenteCtrl() {
 }
 
 async function registrarControlado() {
-    const d = document.getElementById('ctrlData').value,
-        p = document.getElementById('ctrlPaciente').value.trim(),
-        m = document.getElementById('ctrlMedicamento').value,
-        q = parseFloat(document.getElementById('ctrlQuantidade').value),
-        r = document.getElementById('ctrlResponsavel').value,
-        ri = document.getElementById('ctrlRepetente').value;
-    if (!d || !p || !m || !q || !r) return mostrarStatus('⚠️ Preencha todos os campos obrigatórios!', 'alerta');
-    if (q <= 0) return mostrarStatus('⚠️ Quantidade deve ser maior que zero!', 'alerta');
-    let rep = 'Não';
-    if (ri.includes('REPETENTE (Sim)')) rep = 'Sim';
-    else if (ri.includes('MÊS ANTERIOR')) rep = 'Mês Anterior';
-
-    // Verifica estoque baixo
-    let pendente = false;
-    if (medicamentosEstoqueBaixo.includes(m)) {
-        pendente = true;
-        mostrarStatus(`⚠️ Estoque baixo de ${m}. Dispensação para 1 mês. Pendente para o próximo mês.`, 'alerta');
+    if (salvandoControlado) {
+        mostrarStatus('⏳ Aguarde, registrando...', 'info');
+        return;
     }
-    const pendenteStr = pendente ? 'Pendente próximo mês' : '';
-    const valores = [d, p, m, q, r, rep, pendenteStr];
+    salvandoControlado = true;
+    const btn = document.querySelector('#modulo-controlados .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = '💊 Salvando...'; }
 
-    registrosCtrl.push({ data: d, paciente: p, medicamento: m, quantidade: q, responsavel: r, repetente: rep, pendente: pendente });
-    localStorage.setItem('registros_344', JSON.stringify(registrosCtrl));
-
-    if (navigator.onLine) {
-        try {
-            await escreverPlanilha(SHEET_ID_CTRL, 'Registros!A:G', valores);
-            if (rep === 'Sim') mostrarStatus(`🔴 REPETENTE!\n${p} - ${m}\nRegistrado na planilha!`, 'alerta');
-            else if (rep === 'Mês Anterior') mostrarStatus(`🟡 MÊS ANTERIOR!\n${p} - ${m}\nRegistrado na planilha!`, 'info');
-            else mostrarStatus(`✅ SUCESSO!\n${p} - ${m} (${q} un.)\nRegistrado na planilha!`, 'sucesso');
-            if (pendente) mostrarStatus(`⏳ Pendente próximo mês para ${p} - ${m}`, 'info');
-        } catch (e) {
-            adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:G', valores);
-            mostrarStatus(`⚠️ Salvo localmente! Sincroniza depois.`, 'alerta');
+    try {
+        const d = document.getElementById('ctrlData').value,
+            p = document.getElementById('ctrlPaciente').value.trim(),
+            m = document.getElementById('ctrlMedicamento').value,
+            q = parseFloat(document.getElementById('ctrlQuantidade').value),
+            r = document.getElementById('ctrlResponsavel').value,
+            ri = document.getElementById('ctrlRepetente').value;
+        if (!d || !p || !m || !q || !r) {
+            mostrarStatus('⚠️ Preencha todos os campos obrigatórios!', 'alerta');
+            return;
         }
-    } else {
-        adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:G', valores);
-        mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`, 'info');
-    }
+        if (q <= 0) {
+            mostrarStatus('⚠️ Quantidade deve ser maior que zero!', 'alerta');
+            return;
+        }
+        let rep = 'Não';
+        if (ri.includes('REPETENTE (Sim)')) rep = 'Sim';
+        else if (ri.includes('MÊS ANTERIOR')) rep = 'Mês Anterior';
 
-    ['ctrlPaciente', 'ctrlMedicamento', 'ctrlQuantidade', 'ctrlResponsavel'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    const repEl = document.getElementById('ctrlRepetente');
-    if (repEl) { repEl.value = 'Preencha os campos';
-        repEl.style.cssText = ''; }
-    const dataEl = document.getElementById('ctrlData');
-    if (dataEl) dataEl.valueAsDate = new Date();
-    const ds = document.getElementById('dashboardMesControlados');
-    if (ds && ds.value !== 'atual') { dashboardMesCtrl = ds.value;
-        localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); }
-    carregarDashboardCtrl();
-    atualizarModuloControlados();
+        let pendente = false;
+        if (medicamentosEstoqueBaixo.includes(m)) {
+            pendente = true;
+            mostrarStatus(`⚠️ Estoque baixo de ${m}. Dispensação para 1 mês. Pendente para o próximo mês.`, 'alerta');
+        }
+        const pendenteStr = pendente ? 'Pendente próximo mês' : '';
+        const valores = [d, p, m, q, r, rep, pendenteStr];
+
+        registrosCtrl.push({ data: d, paciente: p, medicamento: m, quantidade: q, responsavel: r, repetente: rep, pendente: pendente });
+        localStorage.setItem('registros_344', JSON.stringify(registrosCtrl));
+
+        if (navigator.onLine) {
+            try {
+                await escreverPlanilha(SHEET_ID_CTRL, 'Registros!A:G', valores);
+                if (rep === 'Sim') mostrarStatus(`🔴 REPETENTE!\n${p} - ${m}\nRegistrado na planilha!`, 'alerta');
+                else if (rep === 'Mês Anterior') mostrarStatus(`🟡 MÊS ANTERIOR!\n${p} - ${m}\nRegistrado na planilha!`, 'info');
+                else mostrarStatus(`✅ SUCESSO!\n${p} - ${m} (${q} un.)\nRegistrado na planilha!`, 'sucesso');
+                if (pendente) mostrarStatus(`⏳ Pendente próximo mês para ${p} - ${m}`, 'info');
+            } catch (e) {
+                adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:G', valores);
+                mostrarStatus(`⚠️ Salvo localmente! Sincroniza depois.`, 'alerta');
+            }
+        } else {
+            adicionarFilaOffline('controlado', SHEET_ID_CTRL, 'Registros!A:G', valores);
+            mostrarStatus(`💾 Offline! Salvo localmente (${filaOffline.length} na fila).`, 'info');
+        }
+
+        ['ctrlPaciente', 'ctrlMedicamento', 'ctrlQuantidade', 'ctrlResponsavel'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const repEl = document.getElementById('ctrlRepetente');
+        if (repEl) { repEl.value = 'Preencha os campos';
+            repEl.style.cssText = ''; }
+        const dataEl = document.getElementById('ctrlData');
+        if (dataEl) dataEl.valueAsDate = new Date();
+        const ds = document.getElementById('dashboardMesControlados');
+        if (ds && ds.value !== 'atual') { dashboardMesCtrl = ds.value;
+            localStorage.setItem('dashboard_mes_344', dashboardMesCtrl); }
+        carregarDashboardCtrl();
+        atualizarModuloControlados();
+    } finally {
+        salvandoControlado = false;
+        if (btn) { btn.disabled = false; btn.textContent = '💊 Registrar'; }
+    }
 }
 
 function atualizarDashboardControlados() {
@@ -921,54 +959,76 @@ function atualizarEstoqueDisponivel() {
 }
 
 async function registrarEspecial() {
-    const d = document.getElementById('espData').value,
-        p = document.getElementById('espPaciente').value.trim(),
-        m = document.getElementById('espMedicamento').value,
-        a = parseInt(document.getElementById('espAmpolas').value),
-        pr = document.getElementById('espPrescritor').value.trim(),
-        cicloAtual = document.getElementById('espCicloAtual').value || '',
-        cv = parseInt(document.getElementById('espCiclosEV').value) || 0;
-    if (!d || !p || !m || !a || !pr) return mostrarStatus('⚠️ Preencha todos os campos!', 'alerta');
-    if (a <= 0) return mostrarStatus('⚠️ Quantidade inválida!', 'alerta');
-    const ea = estoque[m] || 0;
-    if (a > ea) return mostrarStatus(`⚠️ Estoque insuficiente!\nDisponível: ${ea} | Solicitado: ${a}`, 'alerta');
-    estoque[m] = ea - a;
-    const ne = estoque[m];
-    localStorage.setItem('estoque_esp', JSON.stringify(estoque));
-    const valores = [d, p, m, a, pr, cicloAtual, cv, ne];
-    registrosEsp.push({ data: d, paciente: p, medicamento: m, ampolas: a, prescritor: pr, cicloAtual, ciclosEV: cv, estoque: ne });
-    localStorage.setItem('registros_esp', JSON.stringify(registrosEsp));
-
-    if (navigator.onLine) {
-        try {
-            await escreverPlanilha(SHEET_ID_ESP, 'Página1!A:H', valores);
-            mostrarStatus(`✅ DISPENSADO!\n${p} - ${m}\n${a} ampolas | Estoque: ${ne}`, 'sucesso');
-        } catch (e) {
-            adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);
-            mostrarStatus(`⚠️ Salvo localmente!`, 'alerta');
-        }
-    } else {
-        adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);
-        mostrarStatus(`💾 Offline! Salvo localmente.`, 'info');
+    if (salvandoEspecial) {
+        mostrarStatus('⏳ Aguarde, registrando...', 'info');
+        return;
     }
+    salvandoEspecial = true;
+    const btn = document.querySelector('#modulo-especiais .btn-roxo');
+    if (btn) { btn.disabled = true; btn.textContent = '💉 Salvando...'; }
 
-    ['espPaciente', 'espAmpolas', 'espPrescritor', 'espCiclosEV'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
-    });
-    document.getElementById('espCicloAtual').value = '';
-    const medEl = document.getElementById('espMedicamento');
-    if (medEl) medEl.value = '';
-    const estEl = document.getElementById('espEstoqueDisponivel');
-    if (estEl) { estEl.value = 'Selecione';
-        estEl.style.cssText = ''; }
-    const dataEl = document.getElementById('espData');
-    if (dataEl) dataEl.valueAsDate = new Date();
-    const ds = document.getElementById('dashboardMesEspeciais');
-    if (ds && ds.value !== 'atual') { dashboardMesEsp = ds.value;
-        localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); }
-    carregarDashboardEsp();
-    atualizarModuloEspeciais();
+    try {
+        const d = document.getElementById('espData').value,
+            p = document.getElementById('espPaciente').value.trim(),
+            m = document.getElementById('espMedicamento').value,
+            a = parseInt(document.getElementById('espAmpolas').value),
+            pr = document.getElementById('espPrescritor').value.trim(),
+            cicloAtual = document.getElementById('espCicloAtual').value || '',
+            cv = parseInt(document.getElementById('espCiclosEV').value) || 0;
+        if (!d || !p || !m || !a || !pr) {
+            mostrarStatus('⚠️ Preencha todos os campos!', 'alerta');
+            return;
+        }
+        if (a <= 0) {
+            mostrarStatus('⚠️ Quantidade inválida!', 'alerta');
+            return;
+        }
+        const ea = estoque[m] || 0;
+        if (a > ea) {
+            mostrarStatus(`⚠️ Estoque insuficiente!\nDisponível: ${ea} | Solicitado: ${a}`, 'alerta');
+            return;
+        }
+        estoque[m] = ea - a;
+        const ne = estoque[m];
+        localStorage.setItem('estoque_esp', JSON.stringify(estoque));
+        const valores = [d, p, m, a, pr, cicloAtual, cv, ne];
+        registrosEsp.push({ data: d, paciente: p, medicamento: m, ampolas: a, prescritor: pr, cicloAtual, ciclosEV: cv, estoque: ne });
+        localStorage.setItem('registros_esp', JSON.stringify(registrosEsp));
+
+        if (navigator.onLine) {
+            try {
+                await escreverPlanilha(SHEET_ID_ESP, 'Página1!A:H', valores);
+                mostrarStatus(`✅ DISPENSADO!\n${p} - ${m}\n${a} ampolas | Estoque: ${ne}`, 'sucesso');
+            } catch (e) {
+                adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);
+                mostrarStatus(`⚠️ Salvo localmente!`, 'alerta');
+            }
+        } else {
+            adicionarFilaOffline('especial', SHEET_ID_ESP, 'Página1!A:H', valores);
+            mostrarStatus(`💾 Offline! Salvo localmente.`, 'info');
+        }
+
+        ['espPaciente', 'espAmpolas', 'espPrescritor', 'espCiclosEV'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        document.getElementById('espCicloAtual').value = '';
+        const medEl = document.getElementById('espMedicamento');
+        if (medEl) medEl.value = '';
+        const estEl = document.getElementById('espEstoqueDisponivel');
+        if (estEl) { estEl.value = 'Selecione';
+            estEl.style.cssText = ''; }
+        const dataEl = document.getElementById('espData');
+        if (dataEl) dataEl.valueAsDate = new Date();
+        const ds = document.getElementById('dashboardMesEspeciais');
+        if (ds && ds.value !== 'atual') { dashboardMesEsp = ds.value;
+            localStorage.setItem('dashboard_mes_esp', dashboardMesEsp); }
+        carregarDashboardEsp();
+        atualizarModuloEspeciais();
+    } finally {
+        salvandoEspecial = false;
+        if (btn) { btn.disabled = false; btn.textContent = '💉 Registrar'; }
+    }
 }
 
 async function registrarEntradaEstoque() {
@@ -1088,6 +1148,46 @@ function exportarCSVEsp() {
     link.click();
     mostrarStatus('✅ CSV exportado!', 'sucesso');
 }
+
+// ============ BACKUP MANUAL (DRIVE) ============
+function exportarBackupDrive() {
+    try {
+        const data = {
+            versao: VERSAO,
+            data: new Date().toISOString(),
+            pacientes: pacientes,
+            controlados: registrosCtrl,
+            especiais: registrosEsp,
+            diabetes: registrosDiabetes,
+            estoque: estoque,
+            limitesRefil: limitesRefil,
+            config: {
+                medicamentosCtrl: medicamentosAtivosCtrl,
+                responsaveis: responsaveisAtivos,
+                medicamentosEsp: MEDICAMENTOS_ESP,
+                estoqueBaixo: medicamentosEstoqueBaixo,
+                acsOptions: acsOptions,
+                ubsOptions: ubsOptions
+            }
+        };
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        const now = new Date();
+        const fileName = `backup_farmacia_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}.json`;
+        link.download = fileName;
+        link.click();
+        mostrarStatus(`📥 Backup baixado: ${fileName}`, 'sucesso');
+    } catch (e) {
+        console.error(e);
+        mostrarStatus('❌ Erro ao gerar backup', 'erro');
+    }
+}
+
+// Adicionar botão de backup na interface (opcional)
+// Se quiser, pode adicionar um botão no footer ou no painel de configurações.
+// Exemplo: <button onclick="exportarBackupDrive()">📤 Backup</button>
 
 // ============ CONFIGURAÇÕES ============
 function abrirConfig() {
