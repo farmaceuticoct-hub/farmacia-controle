@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="status-registro" id="statusFlutuante"></div>
-    
+
     <div class="botoes-navegacao">
         <button class="btn-navegacao btn-topo" onclick="irParaTopo()" title="Voltar ao topo">⬆</button>
         <button class="btn-navegacao btn-base" onclick="irParaBase()" title="Ir para o final">⬇</button>
@@ -29,21 +29,28 @@
                 <span id="statusText">Pronto</span>
             </div>
         </div>
-        
-        <!-- NAVEGAÇÃO -->
+
+        <!-- MENU PRINCIPAL (links para outras partes do sistema) -->
         <div class="nav-tabs">
-            <div class="nav-tab active" onclick="trocarModulo('pacientes')">👥 Pacientes</div>
-            <div class="nav-tab" onclick="trocarModulo('canetas')">💉 Canetas</div>
-            <div class="nav-tab" onclick="trocarModulo('refis')">🔄 Refis</div>
-            <div class="nav-tab" onclick="trocarModulo('insumos')">📦 Insumos</div>
-            <div class="nav-tab" onclick="window.open('index.html','_self')" title="Voltar para Controlados">💊 Controlados</div>
+            <div class="nav-tab" onclick="window.open('index.html','_self')">💊 Controlados</div>
+            <div class="nav-tab" onclick="window.open('index.html?modulo=especiais','_self')">💉 Especiais</div>
+            <div class="nav-tab active" onclick="window.location.reload()">🩸 Diabetes</div>
         </div>
-        
+
+        <!-- SUB-ABAS INTERNAS -->
+        <div class="sub-tabs">
+            <div class="sub-tab active" onclick="trocarSubAba('pacientes')">👥 Pacientes</div>
+            <div class="sub-tab" onclick="trocarSubAba('canetas')">💉 Canetas</div>
+            <div class="sub-tab" onclick="trocarSubAba('refis')">🔄 Refis</div>
+            <div class="sub-tab" onclick="trocarSubAba('insumos')">📦 Insumos</div>
+            <div class="sub-tab" onclick="abrirConfigItens()" style="margin-left:auto;color:var(--azul-claro);">⚙️ Itens</div>
+        </div>
+
         <div class="content">
-            <!-- MÓDULO PACIENTES -->
-            <div class="modulo active" id="modulo-pacientes">
+            <!-- PAINEL PACIENTES -->
+            <div class="sub-panel active" id="sub-pacientes">
                 <div class="dashboard-header">
-                    <h2>👥 Cadastro de Pacientes</h2>
+                    <h2>👥 Pacientes Cadastrados</h2>
                     <button class="btn btn-primary" onclick="abrirCadastroPaciente()">➕ Novo Paciente</button>
                 </div>
                 <div class="filter-bar">
@@ -52,23 +59,40 @@
                         <option value="todas">Todas UBS</option>
                     </select>
                     <span id="pacientesCount" style="margin-left:auto;font-weight:500;color:var(--texto-claro);"></span>
+                    <button class="btn btn-sm btn-success" onclick="sincronizarTudo()" style="font-size:0.7em;">🔄 Sincronizar</button>
                 </div>
                 <div class="table-wrapper">
                     <table>
-                        <thead><tr><th>Nome</th><th>Nascimento</th><th>Idade</th><th>ACS</th><th>Telefone</th><th>UBS</th><th>Ações</th></tr></thead>
-                        <tbody id="tabelaPacientes"><tr><td colspan="7" style="text-align:center;padding:30px;">Nenhum paciente cadastrado</td></tr></tbody>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Nascimento</th>
+                                <th>Idade</th>
+                                <th>ACS</th>
+                                <th>Telefone</th>
+                                <th>UBS</th>
+                                <th>Limite Refis</th>
+                                <th>Refis (mês)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaPacientes">
+                            <tr><td colspan="8" style="text-align:center;padding:30px;">Nenhum paciente cadastrado</td></tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
-            
-            <!-- MÓDULO CANETAS -->
-            <div class="modulo" id="modulo-canetas">
-                <div class="dashboard-header"><h2>💉 Dispensação de Canetas</h2></div>
+
+            <!-- PAINEL CANETAS -->
+            <div class="sub-panel" id="sub-canetas">
+                <div class="dashboard-header"><h2>💉 Registrar Caneta</h2></div>
                 <div class="form-section">
-                    <h2>📝 Registrar Caneta</h2>
                     <div class="info-box">💉 Cada paciente pode receber uma nova caneta em caso de quebra ou perda. O lote da caneta é registrado.</div>
                     <div class="form-grid">
-                        <div class="form-group"><label>👤 Paciente *</label><select id="canetaPaciente" required><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>👤 Paciente *</label>
+                            <select id="canetaPaciente" required>
+                                <option value="">Selecione o paciente</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="canetaData" required></div>
                         <div class="form-group"><label>🔢 Lote da Caneta *</label><input type="text" id="canetaLote" placeholder="Ex: LOTE-2024-001" required></div>
                         <div class="form-group"><label>📝 Observação</label><input type="text" id="canetaObs" placeholder="Ex: Substituição por quebra"></div>
@@ -85,15 +109,18 @@
                     </table>
                 </div>
             </div>
-            
-            <!-- MÓDULO REFIS -->
-            <div class="modulo" id="modulo-refis">
-                <div class="dashboard-header"><h2>🔄 Dispensação de Refis</h2></div>
+
+            <!-- PAINEL REFIS -->
+            <div class="sub-panel" id="sub-refis">
+                <div class="dashboard-header"><h2>🔄 Registrar Refil</h2></div>
                 <div class="form-section">
-                    <h2>📝 Registrar Refil</h2>
-                    <div class="info-box">🔄 O limite mensal é definido pela receita médica. O sistema avisa quando o paciente já retirou o máximo permitido.</div>
+                    <div class="info-box">🔄 O limite mensal é definido por paciente. O sistema avisa quando o limite for excedido.</div>
                     <div class="form-grid">
-                        <div class="form-group"><label>👤 Paciente *</label><select id="refilPaciente" required onchange="atualizarLimiteRefil()"><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>👤 Paciente *</label>
+                            <select id="refilPaciente" required onchange="atualizarLimiteRefil()">
+                                <option value="">Selecione o paciente</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="refilData" required></div>
                         <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="refilQuantidade" min="1" placeholder="Ex: 3" required></div>
                         <div class="form-group"><label>📊 Limite Mensal</label><input type="text" id="refilLimite" readonly value="Selecione o paciente"></div>
@@ -112,22 +139,28 @@
                     </table>
                 </div>
             </div>
-            
-            <!-- MÓDULO INSUMOS -->
-            <div class="modulo" id="modulo-insumos">
-                <div class="dashboard-header"><h2>📦 Dispensação de Insumos</h2></div>
+
+            <!-- PAINEL INSUMOS -->
+            <div class="sub-panel" id="sub-insumos">
+                <div class="dashboard-header"><h2>📦 Registrar Insumo</h2></div>
                 <div class="form-section">
-                    <h2>📝 Registrar Insumo</h2>
                     <div class="form-grid">
-                        <div class="form-group"><label>👤 Paciente *</label><select id="insumoPaciente" required><option value="">Selecione o paciente</option></select></div>
+                        <div class="form-group"><label>👤 Paciente *</label>
+                            <select id="insumoPaciente" required>
+                                <option value="">Selecione o paciente</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>📅 Data *</label><input type="date" id="insumoData" required></div>
-                        <div class="form-group"><label>📦 Tipo *</label><select id="insumoTipo" required>
-                            <option value="">Selecione</option>
-                            <option value="Tiras para teste">Tiras para teste</option>
-                            <option value="Glicosímetro">Glicosímetro</option>
-                            <option value="Lancetas">Lancetas</option>
-                            <option value="Agulhas para caneta">Agulhas para caneta</option>
-                        </select></div>
+                        <div class="form-group"><label>📦 Tipo *</label>
+                            <select id="insumoTipo" required onchange="atualizarItensInsumo()">
+                                <option value="">Selecione o tipo</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>🛒 Item *</label>
+                            <select id="insumoItem" required>
+                                <option value="">Selecione o item</option>
+                            </select>
+                        </div>
                         <div class="form-group"><label>📦 Quantidade *</label><input type="number" id="insumoQuantidade" min="1" placeholder="Ex: 50" required></div>
                     </div>
                     <div class="btn-group">
@@ -137,19 +170,20 @@
                 <h3 class="section-title">📂 Histórico de Insumos</h3>
                 <div class="table-wrapper">
                     <table>
-                        <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Quantidade</th></tr></thead>
-                        <tbody id="tabelaInsumos"><tr><td colspan="4" style="text-align:center;padding:30px;">Nenhum insumo registrado</td></tr></tbody>
+                        <thead><tr><th>Data</th><th>Paciente</th><th>Tipo</th><th>Item</th><th>Quantidade</th></tr></thead>
+                        <tbody id="tabelaInsumos"><tr><td colspan="5" style="text-align:center;padding:30px;">Nenhum insumo registrado</td></tr></tbody>
                     </table>
                 </div>
             </div>
         </div>
-        
+
         <div class="footer">
             <span>Assistência Farmacêutica - Campo do Tenente/PR</span><span>|</span>
-            <span>Controle de Diabetes</span><span class="footer-version">📦 v1.0</span>
+            <span>Controle de Diabetes</span><span class="footer-version">📦 v2.1</span>
+            <button class="btn btn-sm btn-outline" onclick="exportarBackupDrive()" style="color:white;border-color:rgba(255,255,255,0.4);font-size:0.7em;">📤 Backup</button>
         </div>
     </div>
-    
+
     <!-- MODAIS -->
     <div id="modalCadastroPaciente" class="modal">
         <div class="modal-content" style="max-width:500px;">
@@ -167,18 +201,44 @@
             </div>
         </div>
     </div>
-    
+
     <div id="modalLimiteRefil" class="modal">
         <div class="modal-content" style="max-width:400px;">
             <h3 style="margin-bottom:12px;">⚙️ Definir Limite de Refis</h3>
             <div class="form-grid">
-                <div class="form-group"><label>👤 Paciente</label><select id="limitePaciente" onchange="carregarLimiteAtual()"><option value="">Selecione</option></select></div>
+                <div class="form-group"><label>👤 Paciente</label>
+                    <select id="limitePaciente" onchange="carregarLimiteAtual()">
+                        <option value="">Selecione</option>
+                    </select>
+                </div>
                 <div class="form-group"><label>📊 Limite Mensal</label><input type="number" id="limiteValor" min="1" placeholder="Ex: 3"></div>
                 <div class="form-group"><label>📋 Limite Atual</label><input type="text" id="limiteAtual" readonly value="-"></div>
             </div>
             <div class="btn-group" style="margin-top:15px;">
                 <button class="btn btn-primary" onclick="salvarLimiteRefil()">💾 Salvar</button>
                 <button class="btn" onclick="fecharModal('modalLimiteRefil')" style="background:#a0aec0;color:white;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalConfigItens" class="modal">
+        <div class="modal-content">
+            <h3 style="margin-bottom:12px;">⚙️ Configurar Itens de Diabetes</h3>
+            <div class="config-section">
+                <h4>💉 Canetas</h4>
+                <textarea id="cfgCanetas" rows="4" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <div class="config-section">
+                <h4>🔄 Refis</h4>
+                <textarea id="cfgRefis" rows="4" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <div class="config-section">
+                <h4>📦 Insumos</h4>
+                <textarea id="cfgInsumos" rows="4" style="width:100%;padding:8px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;"></textarea>
+            </div>
+            <div class="btn-group" style="margin-top:15px;">
+                <button class="btn btn-primary" onclick="salvarConfigItens()">💾 Salvar</button>
+                <button class="btn" onclick="fecharModal('modalConfigItens')" style="background:#a0aec0;color:white;">Fechar</button>
             </div>
         </div>
     </div>
