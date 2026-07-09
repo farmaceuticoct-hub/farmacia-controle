@@ -707,6 +707,62 @@ function atualizarTabelaInsumos() {
 function exportarBackupDrive() {
     // ... (código já existente) ...
 }
+// ============ DASHBOARDS (CONTROLADOS, ESPECIAIS, DIABETES) ============
+
+function carregarDashboardCtrl() {
+    const s = document.getElementById('dashboardMesControlados');
+    if (!s) return;
+    s.innerHTML = '<option value="atual">Mês Atual</option>';
+    const m = new Set();
+    registrosCtrl.forEach(r => {
+        if (r.data) {
+            const p = r.data.split('-');
+            if (p.length >= 2) m.add(`${p[0]}-${parseInt(p[1]) - 1}`);
+        }
+    });
+    Array.from(m).sort().reverse().forEach(k => {
+        const [a, me] = k.split('-').map(Number);
+        s.innerHTML += `<option value="${k}" ${dashboardMesCtrl === k ? 'selected' : ''}>${MESES[me]} de ${a}</option>`;
+    });
+    if (dashboardMesCtrl && m.has(dashboardMesCtrl)) s.value = dashboardMesCtrl;
+}
+
+function carregarDashboardEsp() {
+    const s = document.getElementById('dashboardMesEspeciais');
+    if (!s) return;
+    s.innerHTML = '<option value="atual">Mês Atual</option>';
+    const m = new Set();
+    registrosEsp.forEach(r => {
+        if (r.data) {
+            const p = r.data.split('-');
+            if (p.length >= 2) m.add(`${p[0]}-${parseInt(p[1]) - 1}`);
+        }
+    });
+    Array.from(m).sort().reverse().forEach(k => {
+        const [a, me] = k.split('-').map(Number);
+        s.innerHTML += `<option value="${k}" ${dashboardMesEsp === k ? 'selected' : ''}>${MESES[me]} de ${a}</option>`;
+    });
+    if (dashboardMesEsp && m.has(dashboardMesEsp)) s.value = dashboardMesEsp;
+}
+
+function carregarDashboardDiabetes() {
+    const s = document.getElementById('dashboardMesDiabetes');
+    if (!s) return;
+    s.innerHTML = '<option value="atual">Mês Atual</option>';
+    const todosRegistros = [...registrosDiabetes.canetas, ...registrosDiabetes.refis, ...registrosDiabetes.insumos];
+    const m = new Set();
+    todosRegistros.forEach(r => {
+        if (r.data) {
+            const p = r.data.split('-');
+            if (p.length >= 2) m.add(`${p[0]}-${parseInt(p[1]) - 1}`);
+        }
+    });
+    Array.from(m).sort().reverse().forEach(k => {
+        const [a, me] = k.split('-').map(Number);
+        s.innerHTML += `<option value="${k}" ${dashboardMesDiabetes === k ? 'selected' : ''}>${MESES[me]} de ${a}</option>`;
+    });
+    if (dashboardMesDiabetes && m.has(dashboardMesDiabetes)) s.value = dashboardMesDiabetes;
+}
 
 // ============ INICIALIZAR ============
 inicializar();
