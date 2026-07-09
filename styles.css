@@ -103,6 +103,8 @@ body {
         .btn-outline { background: transparent; border: 2px solid var(--azul-medio); color: var(--azul-medio); font-weight: 600; }
         .btn-outline:hover { background: var(--azul-medio); color: white; }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-dia { background: linear-gradient(135deg, #3182ce, #2b5aa7); color: white;}
+        .btn-dia:hover { transform: translateY(-1px);}
         
         .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid var(--cinza-medio); background: var(--branco); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
