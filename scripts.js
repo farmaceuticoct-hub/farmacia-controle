@@ -700,7 +700,7 @@ async function registrarRefil() {
 
         if (retiradoEsteMes + quantidade > limite) {
             mostrarStatus(
-                `⚠️ Limite excedido!\n\nPaciente: ${paciente}\nLimite mensal: ${limite}\nJá retirado: ${retiradoEsteMes}\nTentando retirar: ${quantidade}\nDisponível: ${limite - retiradoEsteMes}`,
+                `⚠️ Limite excedido!\n\nPaciente: ${paciente}\nLimite mensal: ${limite}\nJá retirado: ${retiradoEsteMes}\nTentando retirar: ${quantidade}\nDisponível: ${limite - retiradoEsteMes}`
                 'alerta'
             );
             return;
